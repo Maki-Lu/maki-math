@@ -56,3 +56,6 @@ jobs:
     needs: ["frontend-build-publish", "backend-build-publish"]
     steps:
       - uses: actions/download-artifact@v5
+      - name: replace artifacts
+        run: |
+          echo $GITHUB_WORKSPACE
