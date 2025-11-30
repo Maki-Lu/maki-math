@@ -56,6 +56,13 @@ jobs:
     needs: ["frontend-build-publish", "backend-build-publish"]
     steps:
       - uses: actions/download-artifact@v5
+      - name: stop-backend
+        run: ssh maki-math-prod sudo systemctl stop math-api.service
       - name: replace artifacts
         run: |
-          echo $GITHUB_WORKSPACE
+          rsync -avz --delete $GITHUB_WORKSPACE/vite-artifact/ maki-math-prod:/var/www/math_platform/web-client/dist/
+          rsync -avc --delete $GITHUB_WORKSPACE/dotnet-artifact/ maki-math-prod:/var/www/math_platform/publish/
+      - name: apply migration
+        run: ssh maki-math-prod psql -U math_admin -d math_db -f /var/www/math_platform/publish/migration.sql
+      - name: start-backend
+        run: ssh maki-math-prod sudo systemctl start math-api.service
