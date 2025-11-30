@@ -25,7 +25,7 @@ jobs:
     - name: Generate Migration Script
       run: |
         export PATH="$PATH:/github/home/.dotnet/tools"
-        dotnet ef --project MathAPI  migrations script --idempotent > MathAPI/bin/Release/net8.0/publish/migration.sql
+        dotnet ef --project MathAPI  migrations script --idempotent -o MathAPI/bin/Release/net8.0/publish/migration.sql
     - name: publish backend
       uses: actions/upload-artifact@v4
       with:
