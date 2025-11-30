@@ -53,5 +53,6 @@ jobs:
         retention-days: 1
   deploy:
     runs-on: [self-hosted]
+    needs: ["frontend-build-publish", "backend-build-publish"]
     steps:
       - uses: actions/download-artifact@v5
