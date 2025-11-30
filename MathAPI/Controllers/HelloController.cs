@@ -7,7 +7,7 @@ public class HelloController : ControllerBase
     [HttpGet("hello")]
     public string Hello()
     {
-        return "Hello, maki!";
+        return "Hello, makiki!";
     }
 
     [HttpGet("echo")]
