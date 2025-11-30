@@ -19,6 +19,33 @@
   --glass-border: rgba(255, 255, 255, 0.8);
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
   --blur-amt: 12px;
+
+  /* === 响应式数学函数 (Responsive Math Functions) === */
+  
+  /* Padding 计算公式:
+     最小值: 12px (防止手机上太贴边)
+     理想值: 3vw (屏幕宽度的 3%)
+     最大值: 30px (电脑上保持舒适距离)
+  */
+  --bubble-padding-v: clamp(15px, 3vw, 30px); /* 垂直内边距 */
+  --bubble-padding-h: clamp(10px, 2vw, 25px); /* 水平内边距 */
+  
+  /* Margin: 手机上紧凑一点，电脑上松散一点 */
+  --bubble-margin: clamp(6px, 1.5vw, 20px);
+  
+  /* Border Radius: 手机上圆角小一点，电脑上大一点 */
+  --bubble-radius: clamp(16px, 3vw, 36px);
+
+  /* 字体大小: 手机上稍微小一点 */
+  --title-size: clamp(0.9rem, 2.5vw, 1.1rem);
+}
+
+/* 针对极小屏幕 (手机竖屏) 的额外优化 */
+@media (max-width: 480px) {
+  :root {
+      /* 在手机上，把左右留白再压榨一点 */
+      --bubble-padding-h: 8px; 
+  }
 }
 
 body {

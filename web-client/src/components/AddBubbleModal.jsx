@@ -1,24 +1,23 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom'; // 1. 引入传送门
 import api from '../utils/api';
 
 export default function AddBubbleModal({ parentId, onClose, onSuccess }) {
     const [name, setName] = useState('');
-    const [layout, setLayout] = useState(0); // 0: Ordered, 1: Unordered
+    const [layout, setLayout] = useState(0); 
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         try {
-            // 调用后端 API 创建泡泡
             await api.post('/bubble', {
                 name: name,
-                parentId: parentId || null, // 如果没有 parentId，就是顶级课程
+                parentId: parentId || null, 
                 layout: parseInt(layout)
             });
-            alert('创建成功！');
-            onSuccess(); // 通知父组件刷新列表
-            onClose();   // 关闭弹窗
+            onSuccess(); 
+            onClose();   
         } catch (err) {
             alert('创建失败: ' + (err.response?.data || err.message));
         } finally {
@@ -26,44 +25,52 @@ export default function AddBubbleModal({ parentId, onClose, onSuccess }) {
         }
     };
 
-    // 简单的内联样式 (Modal)
-    const modalStyle = {
+    // 2. 这里的 zIndex 设为最高，且 position fixed 保证覆盖全屏
+    const overlayStyle = {
         position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
-        backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center',
-        zIndex: 1000
+        backgroundColor: 'rgba(255, 255, 255, 0.6)', // 半透明白背景，磨砂感
+        backdropFilter: 'blur(5px)', // 背景模糊
+        display: 'flex', justifyContent: 'center', alignItems: 'center',
+        zIndex: 99999 // 最高层级
     };
 
-    return (
-        <div style={modalStyle}>
-            <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', minWidth: '300px' }}>
-                <h3>{parentId ? '添加子泡泡' : '创建新课程'}</h3>
+    const modalContent = (
+        <div style={overlayStyle} onClick={onClose}>
+            <div 
+                style={{ 
+                    background: '#fff', padding: '30px', borderRadius: '24px', 
+                    minWidth: '300px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                    border: '1px solid #f0f0f0'
+                }} 
+                onClick={e => e.stopPropagation()} // 防止点击内容关闭
+            >
+                <h3 style={{ marginTop: 0, color: '#555' }}>
+                    {parentId ? '🌱 添加新内容' : '🌍 创建新课程'}
+                </h3>
                 <form onSubmit={handleSubmit}>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label>名称：</label>
+                    <div style={{ marginBottom: '15px' }}>
+                        <label style={{display:'block', marginBottom:'5px', fontWeight:'bold', color:'#777'}}>名称</label>
                         <input 
-                            type="text" 
-                            value={name} 
-                            onChange={e => setName(e.target.value)} 
-                            required 
-                            style={{ width: '100%', padding: '5px' }}
+                            type="text" value={name} onChange={e => setName(e.target.value)} required 
+                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #eee', fontSize:'16px' }}
+                            placeholder="请输入名字..."
                         />
                     </div>
                     
-                    <div style={{ marginBottom: '10px' }}>
-                        <label>内部布局：</label>
+                    <div style={{ marginBottom: '20px' }}>
+                        <label style={{display:'block', marginBottom:'5px', fontWeight:'bold', color:'#777'}}>布局模式</label>
                         <select 
-                            value={layout} 
-                            onChange={e => setLayout(e.target.value)}
-                            style={{ width: '100%', padding: '5px' }}
+                            value={layout} onChange={e => setLayout(e.target.value)}
+                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #eee', fontSize:'16px', background:'white' }}
                         >
-                            <option value={0}>有序 (纵向排列)</option>
-                            <option value={1}>无序 (气泡聚合)</option>
+                            <option value={0}>📑 列表模式 (有序)</option>
+                            <option value={1}>☁️ 云朵模式 (无序)</option>
                         </select>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-                        <button type="button" onClick={onClose}>取消</button>
-                        <button type="submit" disabled={loading}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                        <button type="button" onClick={onClose} style={{ padding: '8px 20px', borderRadius: '20px', border:'none', background:'#f0f0f0', color:'#555' }}>取消</button>
+                        <button type="submit" disabled={loading} style={{ padding: '8px 20px', borderRadius: '20px', border:'none', background:'#ffafcc', color:'white', fontWeight:'bold' }}>
                             {loading ? '提交中...' : '确定'}
                         </button>
                     </div>
@@ -71,4 +78,7 @@ export default function AddBubbleModal({ parentId, onClose, onSuccess }) {
             </div>
         </div>
     );
+
+    // 3. 传送！
+    return createPortal(modalContent, document.body);
 }

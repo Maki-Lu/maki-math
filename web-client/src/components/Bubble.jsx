@@ -91,10 +91,13 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
         backdropFilter: 'blur(12px)',            // 模糊背景，营造空气感
         WebkitBackdropFilter: 'blur(12px)',
         border: '1px solid rgba(255, 255, 255, 0.8)', // 亮边框，模拟玻璃边缘
-        borderRadius: level === 0 ? '24px' : '36px',  // 极度圆润
+        // level === 0 是最外层课程，给大一点；里面的用数学函数计算
+        borderRadius: level === 0 ? '16px' : 'var(--bubble-radius)',
+        margin: 'var(--bubble-margin)',
+        // 顶部 padding 特别处理：因为头部有标题和按钮，需要大一点的空间
+        padding: `calc(var(--bubble-padding-v) + 30px) var(--bubble-padding-h) var(--bubble-padding-v) var(--bubble-padding-h)`,
         boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.05)', // 极其柔和的阴影
-        margin: '20px 10px',
-        padding: '20px',
+        
         minWidth: '200px',
         minHeight: '120px',
         display: 'flex',
@@ -127,9 +130,10 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
     const btnStyle = (color) => ({
         border: 'none',
         borderRadius: '12px', // 枕头形
-        padding: '4px 10px',
+        padding: '4px 8px', // 稍微改小
+        fontSize: '11px',
+        minWidth: '24px',   // 保证最小点击面积
         cursor: 'pointer',
-        fontSize: '12px',
         fontWeight: 'bold',
         color: 'white',
         background: color,
