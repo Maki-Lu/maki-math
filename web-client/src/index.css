@@ -1,0 +1,62 @@
+/* 引入可爱的圆体字 (如果系统有的话) */
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap');
+
+:root {
+  /* 字体设置：优先使用圆体 */
+  font-family: 'M PLUS Rounded 1c', 'Nunito', 'Segoe UI', sans-serif;
+  
+  /* --- 樱花色板 (Sakura Palette) --- */
+  /* 背景流光：晨曦粉 -> 天空蓝 -> 奶油白 */
+  --bg-gradient: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); 
+  /* 更少女一点的背景： */
+  --sakura-bg: linear-gradient(to top, #fbc2eb 0%, #a6c1ee 100%);
+  
+  --text-main: #6d6d6d; /* 柔和的深灰，不要纯黑 */
+  --text-light: #999;
+  
+  /* 玻璃拟态参数 */
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.8);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  --blur-amt: 12px;
+}
+
+body {
+  margin: 0;
+  color: var(--text-main);
+  /* 梦幻背景：像日系动漫的蓝天和樱花 */
+  background-image: var(--sakura-bg); 
+  background-attachment: fixed; /* 背景固定，让内容滑动时有视差感 */
+  min-height: 100vh;
+  overflow-x: hidden; /* 防止横向滚动 */
+}
+
+/* 滚动条美化：细细的粉色 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.3);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(251, 194, 235, 0.8); /* 樱花粉 */
+  border-radius: 10px;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* 弹性动画 */
+}
+button:active {
+  transform: scale(0.92);
+}
+
+/* 标题样式优化 */
+h1 {
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(166, 193, 238, 0.8);
+  font-weight: 800;
+  letter-spacing: 1px;
+}
