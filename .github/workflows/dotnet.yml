@@ -29,5 +29,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: dotnet-published-artifact
-        path: bin/Release/net8.0/publish
+        path: MathAPI/bin/Release/net8.0/publish
         retention-days: 1
