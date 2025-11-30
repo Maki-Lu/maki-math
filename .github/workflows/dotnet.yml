@@ -25,3 +25,9 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet publish
+    - name: archive published artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: dotnet-published-artifact
+        path: bin/Release/net8.0/publish
+        retention-days: 1
