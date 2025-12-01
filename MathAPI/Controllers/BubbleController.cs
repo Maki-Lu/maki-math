@@ -17,15 +17,29 @@ namespace MathAPI.Controllers
             _context = context;
         }
 
-        // 获取整个课程结构（所有用户可访问，但只能看到 Active 的内容）
+        // 获取整个课程结构 (瘦身版)
         [HttpGet("structure")]
         public async Task<IActionResult> GetStructure()
         {
+            // 使用 Select 进行投影 (Projection)，只取需要的字段
+            // 这样数据库绝对不会读取 Content 列，速度极快
             var bubbles = await _context.Bubbles
-                .Include(b => b.Nodes)
-            //    .Where(b => b.Status == ContentStatus.Active) // 只显示已发布的
+                .Select(b => new BubbleStructureDto
+                {
+                    Id = b.Id,
+                    Name = b.Name,
+                    ParentId = b.ParentId,
+                    ChildLayout = b.ChildLayout,
+                    OrderIndex = b.OrderIndex,
+                    Nodes = b.Nodes.Select(n => new NodeSummaryDto 
+                    { 
+                        Id = n.Id, 
+                        Title = n.Title,
+                        OrderIndex = n.OrderIndex
+                    }).ToList()
+                })
                 .ToListAsync();
-            // 注意：实际生产中需要构建成树状 JSON 返回，这里简化直接返回列表
+
             return Ok(bubbles);
         }
 
