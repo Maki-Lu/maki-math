@@ -1,11 +1,13 @@
 import React, { useState, useRef } from 'react';
 import AddBubbleModal from './AddBubbleModal';
 import AddNodeModal from './AddNodeModal';
+import NodeDetailModal from './NodeDetailModal'; // <--- 新增
 import api from '../utils/api';
 
 const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
     const [showAddBubble, setShowAddBubble] = useState(false);
     const [showAddNode, setShowAddNode] = useState(false);
+    const [selectedNode, setSelectedNode] = useState(null); // <--- 新增：当前选中的知识点
     const timerRef = useRef(null);
 
     const role = localStorage.getItem('role');
@@ -23,7 +25,7 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
                 action: () => {
                     const newTitle = prompt('修改标题:', targetData.title);
                     if (!newTitle) return;
-                    const newContent = prompt('修改内容:', targetData.content);
+                    const newContent = prompt('修改内容 (LaTeX/Markdown):', targetData.content);
                     if (!newContent) return;
                     api.put(`/node/${targetData.id}`, { title: newTitle, content: newContent }).then(() => onRefresh());
                 }
@@ -44,7 +46,7 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
                 } 
             });
             options.push({
-                label: targetData.childLayout === 0 ? '✨ 变身：云朵模式 (无序)' : '📑 变身：清单模式 (有序)',
+                label: targetData.childLayout === 0 ? '✨ 变身：云朵模式' : '📑 变身：列表模式',
                 action: () => {
                     const newLayout = targetData.childLayout === 0 ? 1 : 0;
                     api.put(`/bubble/${targetData.id}`, { name: targetData.name, layout: newLayout }).then(() => onRefresh());
@@ -82,150 +84,100 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
     const handleTouchEnd = () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } };
     const handleTouchMove = () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } };
 
-    // === 🎨 艺术品级样式设计 ===
+    // === 点击知识点 ===
+    const handleNodeClick = (e, node) => {
+        e.stopPropagation(); // 防止冒泡
+        // 如果正在触发长按菜单，不要打开详情
+        if (timerRef.current === null) { 
+             setSelectedNode(node); // <--- 打开详情页
+        }
+    };
 
-    // 1. 磨砂玻璃容器 (Glassmorphism)
+    // === 样式 (保持之前的艺术品级样式) ===
     const glassStyle = {
         position: 'relative',
-        background: 'rgba(255, 255, 255, 0.55)', // 半透明白
-        backdropFilter: 'blur(12px)',            // 模糊背景，营造空气感
+        background: 'rgba(255, 255, 255, 0.55)',
+        backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        border: '1px solid rgba(255, 255, 255, 0.8)', // 亮边框，模拟玻璃边缘
-        // level === 0 是最外层课程，给大一点；里面的用数学函数计算
+        border: '1px solid rgba(255, 255, 255, 0.8)',
         borderRadius: level === 0 ? '16px' : 'var(--bubble-radius)',
         margin: 'var(--bubble-margin)',
-        // 顶部 padding 特别处理：因为头部有标题和按钮，需要大一点的空间
         padding: `calc(var(--bubble-padding-v) + 30px) var(--bubble-padding-h) var(--bubble-padding-v) var(--bubble-padding-h)`,
-        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.05)', // 极其柔和的阴影
-        
         minWidth: '200px',
         minHeight: '120px',
-        display: 'flex',
-        flexDirection: 'column', // 垂直排列：上面是头，下面是内容
+        display: 'flex', flexDirection: 'column',
         transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-        userSelect: 'none',
-        touchAction: 'pan-y'
+        userSelect: 'none', touchAction: 'pan-y'
     };
 
-    // 2. 头部区域 (Flex布局：解决遮挡问题)
     const headerStyle = {
-        display: 'flex',
-        justifyContent: 'space-between', // 标题在左，按钮在右，撑开
-        alignItems: 'center',
-        marginBottom: '15px',
-        paddingBottom: '10px',
-        borderBottom: isOrdered ? '1px dashed rgba(0,0,0,0.05)' : 'none', // 隐约的分隔线
-        width: '100%'
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        marginBottom: '15px', paddingBottom: '10px',
+        borderBottom: isOrdered ? '1px dashed rgba(0,0,0,0.05)' : 'none',
+        width: '100%', position: 'absolute', top: '15px', left: 0, paddingLeft:'20px', paddingRight:'20px', boxSizing: 'border-box'
     };
 
-    const titleStyle = {
-        fontSize: '1.1em',
-        fontWeight: '700',
-        color: '#6c757d',
-        letterSpacing: '0.5px'
-    };
+    const titleStyle = { fontSize: 'var(--title-size)', fontWeight: '700', color: '#6c757d', letterSpacing: '0.5px' };
 
-    // 3. 糖果按钮 (可爱风)
     const btnGroupStyle = { display: 'flex', gap: '8px' };
     const btnStyle = (color) => ({
-        border: 'none',
-        borderRadius: '12px', // 枕头形
-        padding: '4px 8px', // 稍微改小
-        fontSize: '11px',
-        minWidth: '24px',   // 保证最小点击面积
-        cursor: 'pointer',
-        fontWeight: 'bold',
-        color: 'white',
-        background: color,
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center'
+        border: 'none', borderRadius: '12px', padding: '4px 8px', cursor: 'pointer',
+        fontSize: '11px', minWidth: '24px', fontWeight: 'bold', color: 'white', background: color,
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'
     });
 
-    // 4. 内容区域
     const contentStyle = {
         display: 'flex',
         flexDirection: isOrdered ? 'column' : 'row',
         flexWrap: isOrdered ? 'nowrap' : 'wrap',
         justifyContent: isOrdered ? 'flex-start' : 'center',
         alignItems: isOrdered ? 'stretch' : 'center',
-        gap: '12px',
-        width: '100%'
+        gap: '12px', width: '100%', marginTop: '20px'
     };
 
-    // 5. 知识点卡片 (Wish Card)
     const nodeStyle = {
-        background: '#fff',
-        border: 'none',
-        borderRadius: '16px',
-        padding: '12px 20px',
-        boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
-        color: '#555',
-        fontSize: '0.95em',
-        cursor: 'pointer',
-        display: 'flex', alignItems: 'center',
+        background: '#fff', border: 'none', borderRadius: '16px', padding: '12px 20px',
+        boxShadow: '0 4px 15px rgba(0,0,0,0.03)', color: '#555', fontSize: '0.95em',
+        cursor: 'pointer', display: 'flex', alignItems: 'center',
         transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-        position: 'relative',
-        overflow: 'hidden'
+        position: 'relative', overflow: 'hidden'
     };
 
-    // 知识点左边的彩色条 (装饰)
-    const nodeDecoStyle = {
-        width: '6px', height: '6px', borderRadius: '50%',
-        background: '#ffb703', marginRight: '10px',
-        boxShadow: '0 0 5px #ffb703'
-    };
+    const nodeDecoStyle = { width: '6px', height: '6px', borderRadius: '50%', background: '#ffb703', marginRight: '10px', boxShadow: '0 0 5px #ffb703' };
 
     return (
         <div 
-            className="bubble-glass" 
-            style={glassStyle}
+            className="bubble-glass" style={glassStyle}
             onContextMenu={(e) => handleContextMenu(e, data, false)}
             onTouchStart={(e) => handleTouchStart(e, data, false)}
             onTouchEnd={handleTouchEnd}
             onTouchMove={handleTouchMove}
         >
-            {/* --- 灵动头部：标题左，按钮右 --- */}
             <div style={headerStyle}>
                 <div style={titleStyle}>{data.name}</div>
                 {canEdit && (
                     <div style={btnGroupStyle}>
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); setShowAddNode(true); }}
-                            style={btnStyle('#ffcdb2')} // 杏色
-                            title="添加星星"
-                        >★</button>
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); setShowAddBubble(true); }}
-                            style={btnStyle('#b5e48c')} // 嫩草绿
-                            title="添加云朵"
-                        >＋</button>
+                        <button onClick={(e) => { e.stopPropagation(); setShowAddNode(true); }} style={btnStyle('#ffcdb2')}>★</button>
+                        <button onClick={(e) => { e.stopPropagation(); setShowAddBubble(true); }} style={btnStyle('#b5e48c')}>＋</button>
                     </div>
                 )}
             </div>
 
-            {/* --- 内容容器 --- */}
             <div style={contentStyle}>
-                {/* 递归子泡泡 */}
                 {data.children && data.children.map(child => (
-                    <Bubble 
-                        key={child.id} 
-                        data={child} 
-                        level={level + 1} 
-                        onRefresh={onRefresh} 
-                        onShowMenu={onShowMenu} 
-                    />
+                    <Bubble key={child.id} data={child} level={level + 1} onRefresh={onRefresh} onShowMenu={onShowMenu} />
                 ))}
 
-                {/* 知识点 */}
                 {data.nodes && data.nodes.map(node => (
                     <div key={node.id} 
                         style={nodeStyle}
-                        title={node.content}
+                        title="点击查看详情"
+                        onClick={(e) => handleNodeClick(e, node)} // <--- 点击打开详情
                         onContextMenu={(e) => handleContextMenu(e, node, true)}
                         onTouchStart={(e) => handleTouchStart(e, node, true)}
                         onTouchEnd={handleTouchEnd}
                         onTouchMove={handleTouchMove}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05) rotate(1deg)'} // 悬停微微晃动
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05) rotate(1deg)'}
                         onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1) rotate(0)'}
                     >
                         <div style={nodeDecoStyle}></div>
@@ -236,6 +188,9 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
 
             {showAddBubble && <AddBubbleModal parentId={data.id} onClose={() => setShowAddBubble(false)} onSuccess={onRefresh} />}
             {showAddNode && <AddNodeModal parentBubbleId={data.id} onClose={() => setShowAddNode(false)} onSuccess={onRefresh} />}
+            
+            {/* 渲染详情弹窗 */}
+            {selectedNode && <NodeDetailModal node={selectedNode} onClose={() => setSelectedNode(null)} />}
         </div>
     );
 };
