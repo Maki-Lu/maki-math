@@ -84,12 +84,26 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
     const handleTouchEnd = () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } };
     const handleTouchMove = () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } };
 
-    // === 点击知识点 ===
-    const handleNodeClick = (e, node) => {
-        e.stopPropagation(); // 防止冒泡
+    // === 点击知识点 (改造后：按需加载) ===
+    const handleNodeClick = async (e, nodeSummary) => {
+        e.stopPropagation();
+        
         // 如果正在触发长按菜单，不要打开详情
-        if (timerRef.current === null) { 
-             setSelectedNode(node); // <--- 打开详情页
+        if (timerRef.current !== null) return;
+
+        // 1. 设置一个临时状态（可选：可以先显示一个 loading 状态）
+        // 这里我们简单处理，直接去请求数据
+        
+        try {
+            // 2. 向后端请求详情 (GET /api/node/123)
+            const res = await api.get(`/node/${nodeSummary.id}`);
+            const fullNode = res.data; // 这里面才有 content
+            
+            // 3. 打开详情页
+            setSelectedNode(fullNode);
+        } catch (err) {
+            alert("获取知识点详情失败，请检查网络");
+            console.error(err);
         }
     };
 
