@@ -3,6 +3,7 @@ import AddBubbleModal from './AddBubbleModal';
 import AddNodeModal from './AddNodeModal';
 import NodeDetailModal from './NodeDetailModal'; // <--- 新增
 import api from '../utils/api';
+import React, { useState, useRef, useEffect } from 'react';
 
 const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
     const [showAddBubble, setShowAddBubble] = useState(false);
@@ -15,6 +16,19 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
     const isAdmin = role === 'Admin'; 
 
     const isOrdered = data.childLayout === 0;
+
+    const [isCollapsed, setIsCollapsed] = useState(false);
+
+    // === 监听全局折叠指令 ===
+    useEffect(() => {
+        if (expandCommand) {       
+            if (level >= expandCommand.level) {
+                setIsCollapsed(true);
+            } else {
+                setIsCollapsed(false);
+            }
+        }
+    }, [expandCommand]); // 依赖 command 变化
 
     // === 菜单逻辑 (保持不变) ===
     const getMenuOptions = (targetData, isNode = false) => {
@@ -159,16 +173,35 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
 
     const nodeDecoStyle = { width: '6px', height: '6px', borderRadius: '50%', background: '#ffb703', marginRight: '10px', boxShadow: '0 0 5px #ffb703' };
 
+    // 折叠按钮样式
+    const toggleBtnStyle = {
+        cursor: 'pointer',
+        fontSize: '12px',
+        color: '#888',
+        marginLeft: '8px',
+        transition: 'transform 0.3s',
+        transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+        display: 'inline-block'
+    };
+
     return (
         <div 
-            className="bubble-glass" style={glassStyle}
+            className="bubble-glass"
+            style={{
+                glassStyle,
+                minHeight: isCollapsed ? '50px' : '120px',
+                paddingBottom: isCollapsed ? '20px' : '20px'
+            }}
             onContextMenu={(e) => handleContextMenu(e, data, false)}
             onTouchStart={(e) => handleTouchStart(e, data, false)}
             onTouchEnd={handleTouchEnd}
             onTouchMove={handleTouchMove}
         >
             <div style={headerStyle}>
-                <div style={titleStyle}>{data.name}</div>
+                <div style={titleStyle} onClick={(e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); /* 点击标题也能折叠 */ }}>
+                    {data.name}
+                    <span style={toggleBtnStyle}>▼</span>
+                </div>
                 {canEdit && (
                     <div style={btnGroupStyle}>
                         <button onClick={(e) => { e.stopPropagation(); setShowAddNode(true); }} style={btnStyle('#ffcdb2')}>★</button>
@@ -177,7 +210,41 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
                 )}
             </div>
 
-            <div style={contentStyle}>
+
+            {!isCollapsed && (
+                <div style={{contentStyle, animation: 'fadeIn 0.3s'}}>
+                    {data.children && data.children.map(child => (
+                        <Bubble 
+                            key={child.id} 
+                            data={child} 
+                            level={level + 1} 
+                            onRefresh={onRefresh} 
+                            onShowMenu={onShowMenu}
+                            expandCommand={expandCommand} // <--- 记得透传指令
+                        />
+                    ))}
+
+                    {data.nodes && data.nodes.map(node => (
+                        <div key={node.id} 
+                            style={nodeStyle}
+                            title="点击查看详情"
+                            onClick={(e) => handleNodeClick(e, node)} // <--- 点击打开详情
+                            onContextMenu={(e) => handleContextMenu(e, node, true)}
+                            onTouchStart={(e) => handleTouchStart(e, node, true)}
+                            onTouchEnd={handleTouchEnd}
+                            onTouchMove={handleTouchMove}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05) rotate(1deg)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1) rotate(0)'}
+                        >
+                            <div style={nodeDecoStyle}></div>
+                            {node.title}
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            
+            {/* <div style={contentStyle}>
                 {data.children && data.children.map(child => (
                     <Bubble key={child.id} data={child} level={level + 1} onRefresh={onRefresh} onShowMenu={onShowMenu} />
                 ))}
@@ -198,13 +265,15 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
                         {node.title}
                     </div>
                 ))}
-            </div>
-
+            </div> */}
+            {/*             
             {showAddBubble && <AddBubbleModal parentId={data.id} onClose={() => setShowAddBubble(false)} onSuccess={onRefresh} />}
             {showAddNode && <AddNodeModal parentBubbleId={data.id} onClose={() => setShowAddNode(false)} onSuccess={onRefresh} />}
-            
+             */}
             {/* 渲染详情弹窗 */}
-            {selectedNode && <NodeDetailModal node={selectedNode} onClose={() => setSelectedNode(null)} />}
+            
+            {/* {selectedNode && <NodeDetailModal node={selectedNode} onClose={() => setSelectedNode(null)} />}
+            */}
         </div>
     );
 };
