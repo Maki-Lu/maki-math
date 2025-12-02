@@ -2,7 +2,7 @@
 
 1. Ping Felis, go ask him to create a development database for you.
 
-2. In your backend, set up an `applications.Development.json` and populate it like this:
+2. In your backend, set up an `appsettings.Development.json` and populate it like this:
 
 ```json
 {
