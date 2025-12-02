@@ -88,16 +88,9 @@ export default function NodeDetailModal({ node, onClose }) {
                 <div style={contentStyle} className="markdown-body">
                     <ReactMarkdown 
                         remarkPlugins={[remarkMath]} 
-                        rehypePlugins={[
-                            [rehypeKatex, { 
-                                strict: false,       // 不报错
-                                trust: true,         // 信任命令
-                                output: 'html',      // 输出 HTML
-                                throwOnError: false  // 出错时显示源码而不是崩溃
-                            }]
-                        ]}
+                        rehypePlugins={[rehypeKatex]}
                     >
-                        {node.content}
+                        {node.content || '*（空空如也，快去添加点数学魔法吧）*'}
                     </ReactMarkdown>
                 </div>
             </div>
