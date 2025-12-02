@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@uiw/react-md-editor": "^4.0.9",
     "axios": "^1.13.2",
     "jwt-decode": "^4.0.0",
     "katex": "^0.16.25",
