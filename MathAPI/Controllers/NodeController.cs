@@ -17,6 +17,15 @@ namespace MathAPI.Controllers
             _context = context;
         }
 
+        // 获取单个知识点的详情 (包含 Content)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetNode(int id)
+        {
+            var node = await _context.Nodes.FindAsync(id);
+            if (node == null) return NotFound();
+            return Ok(node);
+        }
+
         // 添加知识点 (需 Editor 权限)
         [HttpPost]
         [Authorize(Roles = "Editor,Reviewer,Admin")]
@@ -38,7 +47,7 @@ namespace MathAPI.Controllers
             return Ok(node);
         }
 
-	// 修改知识点
+	    // 修改知识点
         [HttpPut("{id}")]
         [Authorize(Roles = "Editor,Reviewer,Admin")]
         public async Task<IActionResult> UpdateNode(int id, [FromBody] CreateNodeDto dto)

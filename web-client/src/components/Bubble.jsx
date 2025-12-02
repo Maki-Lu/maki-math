@@ -3,6 +3,7 @@ import AddBubbleModal from './AddBubbleModal';
 import AddNodeModal from './AddNodeModal';
 import NodeDetailModal from './NodeDetailModal'; // 引入详情页
 import api from '../utils/api';
+import React, { useState, useRef, useEffect } from 'react';
 
 const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }) => {
     // === 状态定义 ===
@@ -182,9 +183,25 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }) => {
     };
     const nodeDecoStyle = { width: '6px', height: '6px', borderRadius: '50%', background: '#ffb703', marginRight: '10px', boxShadow: '0 0 5px #ffb703' };
 
+    // 折叠按钮样式
+    const toggleBtnStyle = {
+        cursor: 'pointer',
+        fontSize: '12px',
+        color: '#888',
+        marginLeft: '8px',
+        transition: 'transform 0.3s',
+        transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+        display: 'inline-block'
+    };
+
     return (
         <div 
-            className="bubble-glass" style={glassStyle}
+            className="bubble-glass"
+            style={{
+                glassStyle,
+                minHeight: isCollapsed ? '50px' : '120px',
+                paddingBottom: isCollapsed ? '20px' : '20px'
+            }}
             onContextMenu={(e) => handleContextMenu(e, data, false)}
             onTouchStart={(e) => handleTouchStart(e, data, false)}
             onTouchEnd={handleTouchEnd}
