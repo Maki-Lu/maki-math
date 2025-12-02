@@ -1,198 +1,100 @@
-import React, { useState, useRef } from 'react';
-import AddBubbleModal from './AddBubbleModal';
-import AddNodeModal from './AddNodeModal';
-import NodeDetailModal from './NodeDetailModal'; // <--- 新增
-import api from '../utils/api';
+import React from 'react';
+import { createPortal } from 'react-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 
-const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
-    const [showAddBubble, setShowAddBubble] = useState(false);
-    const [showAddNode, setShowAddNode] = useState(false);
-    const [selectedNode, setSelectedNode] = useState(null); // <--- 新增：当前选中的知识点
-    const timerRef = useRef(null);
+export default function NodeDetailModal({ node, onClose }) {
+    if (!node) return null;
 
-    const role = localStorage.getItem('role');
-    const canEdit = role === 'Admin' || role === 'Editor';
-    const isAdmin = role === 'Admin'; 
-
-    const isOrdered = data.childLayout === 0;
-
-    // === 菜单逻辑 (保持不变) ===
-    const getMenuOptions = (targetData, isNode = false) => {
-        const options = [];
-        if (isNode) {
-            options.push({
-                label: '✏️ 修改星星内容',
-                action: () => {
-                    const newTitle = prompt('修改标题:', targetData.title);
-                    if (!newTitle) return;
-                    const newContent = prompt('修改内容 (LaTeX/Markdown):', targetData.content);
-                    if (!newContent) return;
-                    api.put(`/node/${targetData.id}`, { title: newTitle, content: newContent }).then(() => onRefresh());
-                }
-            });
-            if (isAdmin) {
-                options.push({
-                    label: '🗑️ 摘下星星',
-                    color: '#ff8fab',
-                    action: () => { if (confirm(`删除 "${targetData.title}"?`)) api.delete(`/node/${targetData.id}`).then(() => onRefresh()); }
-                });
-            }
-        } else {
-            options.push({ 
-                label: '✏️ 重命名', 
-                action: () => {
-                    const newName = prompt('新名称:', targetData.name);
-                    if (newName) api.put(`/bubble/${targetData.id}`, { name: newName, layout: targetData.childLayout }).then(() => onRefresh());
-                } 
-            });
-            options.push({
-                label: targetData.childLayout === 0 ? '✨ 变身：云朵模式' : '📑 变身：列表模式',
-                action: () => {
-                    const newLayout = targetData.childLayout === 0 ? 1 : 0;
-                    api.put(`/bubble/${targetData.id}`, { name: targetData.name, layout: newLayout }).then(() => onRefresh());
-                }
-            });
-            if (isAdmin) {
-                options.push({
-                    label: '🗑️ 移除泡泡',
-                    color: '#ff8fab',
-                    action: () => { if (confirm(`删除 "${targetData.name}"?`)) api.delete(`/bubble/${targetData.id}`).then(() => onRefresh()); }
-                });
-            }
-        }
-        return options;
+    // 遮罩层：全屏磨砂
+    const overlayStyle = {
+        position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+        backgroundColor: 'rgba(255, 255, 255, 0.3)', // 极淡的遮罩
+        backdropFilter: 'blur(8px)', // 强模糊，聚焦视线
+        WebkitBackdropFilter: 'blur(8px)',
+        zIndex: 99999, // 最高层级
+        display: 'flex', justifyContent: 'center', alignItems: 'center',
+        animation: 'fadeIn 0.2s ease-out'
     };
 
-    const triggerMenu = (e, targetData, isNode) => {
-        if (!canEdit) return;
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        const yOffset = e.touches ? -60 : 0;
-        if (onShowMenu) onShowMenu(clientX, clientY + yOffset, getMenuOptions(targetData, isNode));
-        if (navigator.vibrate) navigator.vibrate(50);
-    };
-
-    const handleContextMenu = (e, targetData, isNode = false) => {
-        e.preventDefault(); e.stopPropagation(); triggerMenu(e, targetData, isNode);
-    };
-
-    const handleTouchStart = (e, targetData, isNode = false) => {
-        if (e.touches.length > 1) return;
-        timerRef.current = setTimeout(() => triggerMenu(e, targetData, isNode), 600);
-    };
-
-    const handleTouchEnd = () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } };
-    const handleTouchMove = () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } };
-
-    // === 点击知识点 ===
-    const handleNodeClick = (e, node) => {
-        e.stopPropagation(); // 防止冒泡
-        // 如果正在触发长按菜单，不要打开详情
-        if (timerRef.current === null) { 
-             setSelectedNode(node); // <--- 打开详情页
-        }
-    };
-
-    // === 样式 (保持之前的艺术品级样式) ===
-    const glassStyle = {
-        position: 'relative',
-        background: 'rgba(255, 255, 255, 0.55)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        border: '1px solid rgba(255, 255, 255, 0.8)',
-        borderRadius: level === 0 ? '16px' : 'var(--bubble-radius)',
-        margin: 'var(--bubble-margin)',
-        padding: `calc(var(--bubble-padding-v) + 30px) var(--bubble-padding-h) var(--bubble-padding-v) var(--bubble-padding-h)`,
-        minWidth: '200px',
-        minHeight: '120px',
+    // 内容卡片：像一张纸
+    const cardStyle = {
+        background: 'rgba(255, 255, 255, 0.95)',
+        width: '90%', maxWidth: '800px', // 宽屏阅读体验
+        maxHeight: '85vh', // 留出一点边距
+        borderRadius: '24px',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.1), 0 0 0 1px rgba(255,255,255,0.8)',
         display: 'flex', flexDirection: 'column',
-        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-        userSelect: 'none', touchAction: 'pan-y'
+        position: 'relative',
+        overflow: 'hidden', // 防止圆角溢出
+        animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
     };
 
+    // 头部：标题
     const headerStyle = {
+        padding: '25px 30px',
+        borderBottom: '1px solid rgba(0,0,0,0.06)',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        marginBottom: '15px', paddingBottom: '10px',
-        borderBottom: isOrdered ? '1px dashed rgba(0,0,0,0.05)' : 'none',
-        width: '100%', position: 'absolute', top: '15px', left: 0, paddingLeft:'20px', paddingRight:'20px', boxSizing: 'border-box'
+        background: 'linear-gradient(to right, #fff, #fcfcfc)'
     };
 
-    const titleStyle = { fontSize: 'var(--title-size)', fontWeight: '700', color: '#6c757d', letterSpacing: '0.5px' };
-
-    const btnGroupStyle = { display: 'flex', gap: '8px' };
-    const btnStyle = (color) => ({
-        border: 'none', borderRadius: '12px', padding: '4px 8px', cursor: 'pointer',
-        fontSize: '11px', minWidth: '24px', fontWeight: 'bold', color: 'white', background: color,
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'
-    });
-
+    // 内容区域：可滚动
     const contentStyle = {
-        display: 'flex',
-        flexDirection: isOrdered ? 'column' : 'row',
-        flexWrap: isOrdered ? 'nowrap' : 'wrap',
-        justifyContent: isOrdered ? 'flex-start' : 'center',
-        alignItems: isOrdered ? 'stretch' : 'center',
-        gap: '12px', width: '100%', marginTop: '20px'
+        padding: '30px 40px',
+        overflowY: 'auto',
+        fontSize: '1.1rem',
+        lineHeight: '1.8',
+        color: '#444',
+        fontFamily: "'Latin Modern Math', 'M PLUS Rounded 1c', sans-serif" // 优先用数学字体
     };
 
-    const nodeStyle = {
-        background: '#fff', border: 'none', borderRadius: '16px', padding: '12px 20px',
-        boxShadow: '0 4px 15px rgba(0,0,0,0.03)', color: '#555', fontSize: '0.95em',
-        cursor: 'pointer', display: 'flex', alignItems: 'center',
-        transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-        position: 'relative', overflow: 'hidden'
+    // 关闭按钮
+    const closeBtnStyle = {
+        border: 'none', background: '#f1f3f5', borderRadius: '50%',
+        width: '36px', height: '36px', cursor: 'pointer',
+        fontSize: '18px', color: '#888', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all 0.2s'
     };
 
-    const nodeDecoStyle = { width: '6px', height: '6px', borderRadius: '50%', background: '#ffb703', marginRight: '10px', boxShadow: '0 0 5px #ffb703' };
+    return createPortal(
+        <div style={overlayStyle} onClick={onClose}>
+            <style>{`
+                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes slideUp { from { transform: translateY(20px) scale(0.98); } to { transform: translateY(0) scale(1); } }
+                /* Markdown 样式微调 */
+                .markdown-body h1, .markdown-body h2 { border-bottom: none; color: #ffb703; }
+                .markdown-body p { margin-bottom: 1.2em; }
+                .markdown-body code { background: #f8f9fa; padding: 2px 6px; borderRadius: 4px; color: #e8590c; }
+                .katex { font-size: 1.1em; } /* 公式稍微大一点 */
+            `}</style>
 
-    return (
-        <div 
-            className="bubble-glass" style={glassStyle}
-            onContextMenu={(e) => handleContextMenu(e, data, false)}
-            onTouchStart={(e) => handleTouchStart(e, data, false)}
-            onTouchEnd={handleTouchEnd}
-            onTouchMove={handleTouchMove}
-        >
-            <div style={headerStyle}>
-                <div style={titleStyle}>{data.name}</div>
-                {canEdit && (
-                    <div style={btnGroupStyle}>
-                        <button onClick={(e) => { e.stopPropagation(); setShowAddNode(true); }} style={btnStyle('#ffcdb2')}>★</button>
-                        <button onClick={(e) => { e.stopPropagation(); setShowAddBubble(true); }} style={btnStyle('#b5e48c')}>＋</button>
-                    </div>
-                )}
-            </div>
-
-            <div style={contentStyle}>
-                {data.children && data.children.map(child => (
-                    <Bubble key={child.id} data={child} level={level + 1} onRefresh={onRefresh} onShowMenu={onShowMenu} />
-                ))}
-
-                {data.nodes && data.nodes.map(node => (
-                    <div key={node.id} 
-                        style={nodeStyle}
-                        title="点击查看详情"
-                        onClick={(e) => handleNodeClick(e, node)} // <--- 点击打开详情
-                        onContextMenu={(e) => handleContextMenu(e, node, true)}
-                        onTouchStart={(e) => handleTouchStart(e, node, true)}
-                        onTouchEnd={handleTouchEnd}
-                        onTouchMove={handleTouchMove}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05) rotate(1deg)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1) rotate(0)'}
-                    >
-                        <div style={nodeDecoStyle}></div>
+            <div style={cardStyle} onClick={e => e.stopPropagation()}>
+                {/* 头部 */}
+                <div style={headerStyle}>
+                    <h2 style={{ margin: 0, color: '#495057', fontSize: '1.5rem' }}>
+                        <span style={{color: '#ffb703', marginRight:'10px'}}>★</span> 
                         {node.title}
-                    </div>
-                ))}
+                    </h2>
+                    <button 
+                        style={closeBtnStyle} 
+                        onClick={onClose}
+                        onMouseEnter={e => {e.target.style.background='#ffcccc'; e.target.style.color='white'}}
+                        onMouseLeave={e => {e.target.style.background='#f1f3f5'; e.target.style.color='#888'}}
+                    >✕</button>
+                </div>
+
+                {/* 正文 (Markdown + LaTeX) */}
+                <div style={contentStyle} className="markdown-body">
+                    <ReactMarkdown 
+                        remarkPlugins={[remarkMath]} 
+                        rehypePlugins={[rehypeKatex]}
+                    >
+                        {node.content || '*（空空如也，快去添加点数学魔法吧）*'}
+                    </ReactMarkdown>
+                </div>
             </div>
-
-            {showAddBubble && <AddBubbleModal parentId={data.id} onClose={() => setShowAddBubble(false)} onSuccess={onRefresh} />}
-            {showAddNode && <AddNodeModal parentBubbleId={data.id} onClose={() => setShowAddNode(false)} onSuccess={onRefresh} />}
-            
-            {/* 渲染详情弹窗 */}
-            {selectedNode && <NodeDetailModal node={selectedNode} onClose={() => setSelectedNode(null)} />}
-        </div>
+        </div>,
+        document.body
     );
-};
-
-export default Bubble;
+}
