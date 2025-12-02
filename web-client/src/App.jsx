@@ -33,17 +33,27 @@ function Home() {
             });
     };
 
+    // 辅助函数：把后端返回的扁平列表转换成树状结构
     const buildTree = (items) => {
         const rootItems = [];
         const lookup = {};
-        items.forEach(item => { lookup[item.id] = { ...item, children: [] }; });
+        
+        // 1. 初始化查找表，每个泡泡先给自己加个空的 children 数组
         items.forEach(item => {
+            lookup[item.id] = { ...item, children: [] };
+        });
+
+        // 2. 组装
+        items.forEach(item => {
+            // 如果有爸爸，就把自己塞进爸爸的 children 里
             if (item.parentId && lookup[item.parentId]) {
                 lookup[item.parentId].children.push(lookup[item.id]);
             } else {
+                // 如果没有爸爸，说明是顶级课程
                 rootItems.push(lookup[item.id]);
             }
         });
+
         return rootItems;
     };
 
