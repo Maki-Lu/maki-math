@@ -3,7 +3,6 @@ import AddBubbleModal from './AddBubbleModal';
 import AddNodeModal from './AddNodeModal';
 import NodeDetailModal from './NodeDetailModal'; // 引入详情页
 import api from '../utils/api';
-import React, { useState, useRef, useEffect } from 'react';
 
 const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }) => {
     // === 状态定义 ===
