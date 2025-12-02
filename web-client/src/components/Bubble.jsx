@@ -1,36 +1,40 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import AddBubbleModal from './AddBubbleModal';
 import AddNodeModal from './AddNodeModal';
-import NodeDetailModal from './NodeDetailModal'; // <--- 新增
+import NodeDetailModal from './NodeDetailModal'; // 引入详情页
 import api from '../utils/api';
 import React, { useState, useRef, useEffect } from 'react';
 
-const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
+const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }) => {
+    // === 状态定义 ===
     const [showAddBubble, setShowAddBubble] = useState(false);
     const [showAddNode, setShowAddNode] = useState(false);
-    const [selectedNode, setSelectedNode] = useState(null); // <--- 新增：当前选中的知识点
+    const [selectedNode, setSelectedNode] = useState(null); // 当前选中的知识点(详情)
+    const [isCollapsed, setIsCollapsed] = useState(false);  // 折叠状态
+    
+    // 引用
     const timerRef = useRef(null);
 
+    // 权限
     const role = localStorage.getItem('role');
     const canEdit = role === 'Admin' || role === 'Editor';
     const isAdmin = role === 'Admin'; 
 
     const isOrdered = data.childLayout === 0;
 
-    const [isCollapsed, setIsCollapsed] = useState(false);
-
     // === 监听全局折叠指令 ===
     useEffect(() => {
-        if (expandCommand) {       
+        if (expandCommand) {
+            // 如果当前层级 >= 指令层级，则折叠
             if (level >= expandCommand.level) {
                 setIsCollapsed(true);
             } else {
                 setIsCollapsed(false);
             }
         }
-    }, [expandCommand]); // 依赖 command 变化
+    }, [expandCommand, level]);
 
-    // === 菜单逻辑 (保持不变) ===
+    // === 菜单选项逻辑 ===
     const getMenuOptions = (targetData, isNode = false) => {
         const options = [];
         if (isNode) {
@@ -77,6 +81,7 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
         return options;
     };
 
+    // === 触发菜单 ===
     const triggerMenu = (e, targetData, isNode) => {
         if (!canEdit) return;
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -98,30 +103,23 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
     const handleTouchEnd = () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } };
     const handleTouchMove = () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } };
 
-    // === 点击知识点 (改造后：按需加载) ===
+    // === 点击知识点 (按需加载详情) ===
     const handleNodeClick = async (e, nodeSummary) => {
         e.stopPropagation();
-        
-        // 如果正在触发长按菜单，不要打开详情
-        if (timerRef.current !== null) return;
-
-        // 1. 设置一个临时状态（可选：可以先显示一个 loading 状态）
-        // 这里我们简单处理，直接去请求数据
+        if (timerRef.current !== null) return; // 被长按拦截
         
         try {
-            // 2. 向后端请求详情 (GET /api/node/123)
+            // 请求完整内容
             const res = await api.get(`/node/${nodeSummary.id}`);
-            const fullNode = res.data; // 这里面才有 content
-            
-            // 3. 打开详情页
-            setSelectedNode(fullNode);
+            setSelectedNode(res.data);
         } catch (err) {
-            alert("获取知识点详情失败，请检查网络");
-            console.error(err);
+            console.error("获取详情失败", err);
+            // 如果失败，可以用 summary 兜底显示，或者提示错误
+            alert("加载详情失败，请检查网络");
         }
     };
 
-    // === 样式 (保持之前的艺术品级样式) ===
+    // === 样式定义 ===
     const glassStyle = {
         position: 'relative',
         background: 'rgba(255, 255, 255, 0.55)',
@@ -130,22 +128,33 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
         border: '1px solid rgba(255, 255, 255, 0.8)',
         borderRadius: level === 0 ? '16px' : 'var(--bubble-radius)',
         margin: 'var(--bubble-margin)',
+        // 动态 Padding
         padding: `calc(var(--bubble-padding-v) + 30px) var(--bubble-padding-h) var(--bubble-padding-v) var(--bubble-padding-h)`,
+        // 动态高度 (折叠时变小)
+        minHeight: isCollapsed ? '50px' : '120px',
         minWidth: '200px',
-        minHeight: '120px',
         display: 'flex', flexDirection: 'column',
-        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+        transition: 'all 0.3s ease',
         userSelect: 'none', touchAction: 'pan-y'
     };
 
     const headerStyle = {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         marginBottom: '15px', paddingBottom: '10px',
-        borderBottom: isOrdered ? '1px dashed rgba(0,0,0,0.05)' : 'none',
+        borderBottom: isOrdered && !isCollapsed ? '1px dashed rgba(0,0,0,0.05)' : 'none',
         width: '100%', position: 'absolute', top: '15px', left: 0, paddingLeft:'20px', paddingRight:'20px', boxSizing: 'border-box'
     };
 
-    const titleStyle = { fontSize: 'var(--title-size)', fontWeight: '700', color: '#6c757d', letterSpacing: '0.5px' };
+    const titleStyle = { 
+        fontSize: 'var(--title-size)', fontWeight: '700', color: '#6c757d', letterSpacing: '0.5px',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px'
+    };
+    
+    // 折叠箭头样式
+    const arrowStyle = {
+        fontSize: '10px', color: '#aaa', transition: 'transform 0.3s',
+        transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
+    };
 
     const btnGroupStyle = { display: 'flex', gap: '8px' };
     const btnStyle = (color) => ({
@@ -160,7 +169,9 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
         flexWrap: isOrdered ? 'nowrap' : 'wrap',
         justifyContent: isOrdered ? 'flex-start' : 'center',
         alignItems: isOrdered ? 'stretch' : 'center',
-        gap: '12px', width: '100%', marginTop: '20px'
+        gap: '12px', width: '100%', marginTop: '20px',
+        opacity: isCollapsed ? 0 : 1, // 折叠动画辅助
+        pointerEvents: isCollapsed ? 'none' : 'auto'
     };
 
     const nodeStyle = {
@@ -170,7 +181,6 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
         transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
         position: 'relative', overflow: 'hidden'
     };
-
     const nodeDecoStyle = { width: '6px', height: '6px', borderRadius: '50%', background: '#ffb703', marginRight: '10px', boxShadow: '0 0 5px #ffb703' };
 
     // 折叠按钮样式
@@ -198,9 +208,10 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
             onTouchMove={handleTouchMove}
         >
             <div style={headerStyle}>
-                <div style={titleStyle} onClick={(e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); /* 点击标题也能折叠 */ }}>
+                {/* 点击标题折叠 */}
+                <div style={titleStyle} onClick={(e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }}>
                     {data.name}
-                    <span style={toggleBtnStyle}>▼</span>
+                    <span style={arrowStyle}>▼</span>
                 </div>
                 {canEdit && (
                     <div style={btnGroupStyle}>
@@ -210,9 +221,9 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
                 )}
             </div>
 
-
+            {/* 只有未折叠才渲染内容 */}
             {!isCollapsed && (
-                <div style={{contentStyle, animation: 'fadeIn 0.3s'}}>
+                <div style={contentStyle}>
                     {data.children && data.children.map(child => (
                         <Bubble 
                             key={child.id} 
@@ -220,7 +231,7 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
                             level={level + 1} 
                             onRefresh={onRefresh} 
                             onShowMenu={onShowMenu}
-                            expandCommand={expandCommand} // <--- 记得透传指令
+                            expandCommand={expandCommand} // 透传折叠指令
                         />
                     ))}
 
@@ -228,7 +239,7 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
                         <div key={node.id} 
                             style={nodeStyle}
                             title="点击查看详情"
-                            onClick={(e) => handleNodeClick(e, node)} // <--- 点击打开详情
+                            onClick={(e) => handleNodeClick(e, node)}
                             onContextMenu={(e) => handleContextMenu(e, node, true)}
                             onTouchStart={(e) => handleTouchStart(e, node, true)}
                             onTouchEnd={handleTouchEnd}
@@ -243,37 +254,11 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu }) => {
                 </div>
             )}
 
-            
-            {/* <div style={contentStyle}>
-                {data.children && data.children.map(child => (
-                    <Bubble key={child.id} data={child} level={level + 1} onRefresh={onRefresh} onShowMenu={onShowMenu} />
-                ))}
-
-                {data.nodes && data.nodes.map(node => (
-                    <div key={node.id} 
-                        style={nodeStyle}
-                        title="点击查看详情"
-                        onClick={(e) => handleNodeClick(e, node)} // <--- 点击打开详情
-                        onContextMenu={(e) => handleContextMenu(e, node, true)}
-                        onTouchStart={(e) => handleTouchStart(e, node, true)}
-                        onTouchEnd={handleTouchEnd}
-                        onTouchMove={handleTouchMove}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05) rotate(1deg)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1) rotate(0)'}
-                    >
-                        <div style={nodeDecoStyle}></div>
-                        {node.title}
-                    </div>
-                ))}
-            </div> */}
-            {/*             
             {showAddBubble && <AddBubbleModal parentId={data.id} onClose={() => setShowAddBubble(false)} onSuccess={onRefresh} />}
             {showAddNode && <AddNodeModal parentBubbleId={data.id} onClose={() => setShowAddNode(false)} onSuccess={onRefresh} />}
-             */}
-            {/* 渲染详情弹窗 */}
             
-            {/* {selectedNode && <NodeDetailModal node={selectedNode} onClose={() => setSelectedNode(null)} />}
-            */}
+            {/* 详情页弹窗 */}
+            {selectedNode && <NodeDetailModal node={selectedNode} onClose={() => setSelectedNode(null)} />}
         </div>
     );
 };
