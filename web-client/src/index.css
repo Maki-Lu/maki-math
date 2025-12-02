@@ -2,52 +2,47 @@
 @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap');
 
 :root {
-  /* 字体设置：优先使用圆体 */
+  /* ... 字体和背景变量保持不变 ... */
   font-family: 'M PLUS Rounded 1c', 'Nunito', 'Segoe UI', sans-serif;
-  
-  /* --- 樱花色板 (Sakura Palette) --- */
-  /* 背景流光：晨曦粉 -> 天空蓝 -> 奶油白 */
-  --bg-gradient: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); 
-  /* 更少女一点的背景： */
+  --bg-gradient: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
   --sakura-bg: linear-gradient(to top, #fbc2eb 0%, #a6c1ee 100%);
-  
-  --text-main: #6d6d6d; /* 柔和的深灰，不要纯黑 */
-  --text-light: #999;
-  
-  /* 玻璃拟态参数 */
-  --glass-bg: rgba(255, 255, 255, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.8);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-  --blur-amt: 12px;
+  --text-main: #6d6d6d;
 
+  /* === 📐 数学化动态布局 (微调版：缩小至 65%) === */
   
+  /* 垂直内边距: 原 15-30 -> 现 10-20 */
+  --bubble-padding-v: clamp(10px, 2vw, 20px); 
+  
+  /* 水平内边距: 原 10-25 -> 现 7px-16px */
+  --bubble-padding-h: clamp(7px, 1.5vw, 16px); 
+  
+  /* 外边距(间隙): 原 6-20 -> 现 4px-13px */
+  --bubble-margin: clamp(4px, 1vw, 13px);
+  
+  /* 圆角也稍微收一点 */
+  --bubble-radius: clamp(12px, 2.5vw, 24px);
 
-  /* === 📐 数学化动态布局 (Math-based Layout) === */
-  
-  /* 垂直内边距: 最小15px, 理想3vw, 最大30px */
-  --bubble-padding-v: clamp(15px, 3vw, 30px); 
-  
-  /* 水平内边距: 手机上窄一点(10px), 电脑上宽一点(25px) */
-  --bubble-padding-h: clamp(10px, 2vw, 25px); 
-  
-  /* 外边距(间隙): 随屏幕变大而变宽 */
-  --bubble-margin: clamp(6px, 1.5vw, 20px);
-  
-  /* 圆角: 手机上圆角小(16px), 电脑上大(36px) */
-  --bubble-radius: clamp(16px, 3vw, 36px);
-
-  /* 标题大小: 动态缩放 */
-  --title-size: clamp(0.95rem, 2.5vw, 1.2rem);
-
-  /* 导航栏高度 */
+  /* 标题大小 */
+  --title-size: clamp(0.9rem, 2.5vw, 1.1rem);
   --nav-height: 60px;
+  
+  /* 定义页面最外层的边距 (默认电脑端宽松一点) */
+  --page-padding: 20px;
 }
 
-/* 手机端微调 */
+/* 手机端深度适配 */
 @media (max-width: 480px) {
-  .bubble-content {
-      gap: 5px !important; /* 手机上间距再紧凑一点 */
-  }
+    :root {
+        /* 1. 手机端最外层左右边距改为 5px (通过修改页面 padding 实现) */
+        --page-padding: 5px;
+        
+        /* 手机上泡泡间距保持紧凑 */
+        --bubble-margin: 4px;
+    }
+    
+    .bubble-content {
+        gap: 5px !important; 
+    }
 }
 
 body {

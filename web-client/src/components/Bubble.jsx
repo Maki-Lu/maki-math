@@ -34,25 +34,25 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }) => {
     const glassStyle = {
         position: 'relative',
         backgroundColor: 'rgba(255, 255, 255, 0.6)', 
-        border: `2px solid ${level === 0 ? '#4a90e2' : '#ccc'}`,
         
-        // 1. 使用动态圆角
+        // === 修改点 4: 边框颜色变浅 (银白色系) ===
+        // 最外层给一点点亮白，内层给半透明白，配合阴影制造层次感
+        border: level === 0 ? '2px solid rgba(255, 255, 255, 0.9)' : '1px solid rgba(255, 255, 255, 0.6)',
+        
         borderRadius: level === 0 ? '16px' : 'var(--bubble-radius)',
-        
-        // 2. 使用动态外边距
         margin: 'var(--bubble-margin)',
-        
-        // 3. 使用动态内边距 (关键数学公式！)
-        // 顶部 Padding = 基础动态高度 + 35px (留给标题栏)
-        // 左右/底部 Padding = 基础动态高度
         padding: `calc(var(--bubble-padding-v) + 35px) var(--bubble-padding-h) var(--bubble-padding-v) var(--bubble-padding-h)`,
         
         minHeight: isCollapsed ? '50px' : '120px',
-        // 允许宽度自适应，手机上不撑破屏幕
-        minWidth: 'auto', 
+        
+        // === 修改点 2: 设置最小宽度 ===
+        // 保证右上角两个按钮 (24px * 2 + gap) 和标题能放下
+        // 220px 是一个比较安全的值，既能放下按钮，在手机上也不会撑破屏幕(一般手机宽300+)
+        minWidth: '220px', 
+        
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+        boxShadow: '0 4px 15px rgba(0,0,0,0.05)', // 阴影也调淡一点，更仙气
         transition: 'all 0.3s ease',
         userSelect: 'none',
         backdropFilter: 'blur(10px)'
@@ -78,8 +78,17 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }) => {
     const contentStyle = {
         display: isCollapsed ? 'none' : 'flex',
         flexDirection: isOrdered ? 'column' : 'row',
-        flexWrap: 'wrap', // 关键：手机上强制换行
-        gap: '10px', width: '100%', marginTop: '5px'
+        // flexWrap: 'wrap', // 关键：手机上强制换行
+        flexWrap: isOrdered ? 'nowrap' : 'wrap',
+        
+        // === 修改点 3: 无序(row)时居中 ===
+        // 如果是有序(column)，靠左对齐(flex-start)看起来更整齐
+        // 如果是无序(row)，居中对齐(center)看起来像气泡聚合
+        justifyContent: isOrdered ? 'flex-start' : 'center',
+        
+        gap: '10px', 
+        width: '100%', 
+        marginTop: '10px'
     };
 
     // 按钮和节点样式

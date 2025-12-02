@@ -53,7 +53,7 @@ function Home() {
     if (loading) return <div style={{padding:'20px', textAlign:'center', color:'#fff'}}>正在加载数学宇宙...</div>;
 
     return (
-        <div style={{ padding: '20px' }}>
+        <div style={{ padding: 'var(--page-padding)' }}>
             {/* 顶部标题栏 */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h1 style={{margin:0, fontSize:'1.5rem'}}>Maki 开源数学平台</h1>
