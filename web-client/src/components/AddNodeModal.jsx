@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom'; // 1. 引入传送门
 import api from '../utils/api';
+import MDEditor from '@uiw/react-md-editor';
 
 export default function AddNodeModal({ parentBubbleId, onClose, onSuccess }) {
     const [title, setTitle] = useState('');
@@ -34,15 +35,17 @@ export default function AddNodeModal({ parentBubbleId, onClose, onSuccess }) {
                 <form onSubmit={handleSubmit}>
                     <div style={{ marginBottom: '15px' }}>
                         <input type="text" value={title} onChange={e => setTitle(e.target.value)} required placeholder="标题 (例如: 导数定义)"
-                            style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #eee', fontSize:'16px' }} />
+                            style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #eee', fontSize: '16px' }} />
                     </div>
                     <div style={{ marginBottom: '20px' }}>
-                        <textarea value={content} onChange={e => setContent(e.target.value)} required rows="6" placeholder="内容 (支持 LaTeX 和 Markdown)..."
-                            style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #eee', fontSize:'14px', fontFamily:'inherit', resize:'vertical' }} />
+                        <MDEditor
+                            value={content}
+                            onChange={e => setContent(e)}
+                        />
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                        <button type="button" onClick={onClose} style={{ padding: '8px 20px', borderRadius: '20px', border:'none', background:'#f0f0f0', color:'#555' }}>取消</button>
-                        <button type="submit" disabled={loading} style={{ padding: '8px 20px', borderRadius: '20px', border:'none', background:'#ffb703', color:'white', fontWeight:'bold' }}>{loading ? '...' : '添加'}</button>
+                        <button type="button" onClick={onClose} style={{ padding: '8px 20px', borderRadius: '20px', border: 'none', background: '#f0f0f0', color: '#555' }}>取消</button>
+                        <button type="submit" disabled={loading} style={{ padding: '8px 20px', borderRadius: '20px', border: 'none', background: '#ffb703', color: 'white', fontWeight: 'bold' }}>{loading ? '...' : '添加'}</button>
                     </div>
                 </form>
             </div>
