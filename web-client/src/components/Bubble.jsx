@@ -30,27 +30,30 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }) => {
     const colors = ['#e3f2fd', '#e8f5e9', '#fff9c4', '#fce4ec', '#f3e5f5'];
     const bgColor = colors[level % colors.length];
 
-    // === 样式定义 (稳健版) ===
+    // === 样式定义 (响应式版) ===
     const glassStyle = {
         position: 'relative',
-        // 关键修复：使用明确的背景色，防止透明
-        backgroundColor: 'rgba(255, 255, 255, 0.6)', 
-        border: `2px solid ${level === 0 ? '#4a90e2' : '#ccc'}`, // 确保有边框
-        borderRadius: '20px',
-        margin: '15px', // 明确的边距
-        padding: '50px 20px 20px 20px', // 明确的内边距，顶部留给标题
-        minHeight: isCollapsed ? '60px' : '150px', // 确保有最小高度
-        minWidth: '200px',
+        backgroundColor: 'rgba(255, 255, 255, 0.65)', 
+        border: `2px solid ${level === 0 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.5)'}`,
+        
+        // 使用 CSS 变量！自动响应手机
+        borderRadius: level === 0 ? '16px' : 'var(--bubble-r)',
+        margin: 'var(--bubble-m)',
+        // 顶部 padding 依然要留给标题，但使用变量计算
+        padding: `calc(var(--bubble-p-v) + 35px) var(--bubble-p-h) var(--bubble-p-v) var(--bubble-p-h)`,
+        
+        minHeight: isCollapsed ? '60px' : '100px',
+        minWidth: 'auto', // 允许手机上变窄
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.05)',
         transition: 'all 0.3s ease',
         userSelect: 'none',
         backdropFilter: 'blur(10px)'
     };
 
     const headerStyle = {
-        position: 'absolute', top: '15px', left: '20px', right: '20px',
+        position: 'absolute', top: '15px', left: 'var(--bubble-p-h)', right: 'var(--bubble-p-h)',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         borderBottom: isOrdered && !isCollapsed ? '1px dashed #ccc' : 'none',
         paddingBottom: '5px'
@@ -61,10 +64,10 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }) => {
     };
 
     const contentStyle = {
-        display: isCollapsed ? 'none' : 'flex', // 折叠时直接隐藏
+        display: isCollapsed ? 'none' : 'flex',
         flexDirection: isOrdered ? 'column' : 'row',
-        flexWrap: isOrdered ? 'nowrap' : 'wrap',
-        gap: '10px', width: '100%', marginTop: '10px'
+        flexWrap: 'wrap', // 关键：手机上强制换行
+        gap: '10px', width: '100%', marginTop: '5px'
     };
 
     // 按钮和节点样式

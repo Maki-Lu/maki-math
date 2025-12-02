@@ -1,21 +1,20 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, Outlet, useOutletContext } from 'react-router-dom';
 import api from './utils/api';
 import Login from './pages/Login';
 import Bubble from './components/Bubble';
 import AddBubbleModal from './components/AddBubbleModal';
 import ContextMenu from './components/ContextMenu';
 
+// === Home 组件：只负责显示内容 ===
 function Home() {
     const [treeData, setTreeData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showCreateCourse, setShowCreateCourse] = useState(false);
     const [globalMenu, setGlobalMenu] = useState(null);
 
-    // === 新增：全局折叠指令 ===
-    // level: 展开到第几层 (1:只看课程, 5:全部展开)
-    // ts: 时间戳，用于强制触发更新
-    const [expandCommand, setExpandCommand] = useState({ level: 5, ts: Date.now() });
+    // 接收来自 App 的全局指令！
+    const { expandCommand } = useOutletContext(); 
 
     const role = localStorage.getItem('role');
     const canEdit = role === 'Admin' || role === 'Editor';
@@ -33,27 +32,17 @@ function Home() {
             });
     };
 
-    // 辅助函数：把后端返回的扁平列表转换成树状结构
     const buildTree = (items) => {
         const rootItems = [];
         const lookup = {};
-        
-        // 1. 初始化查找表，每个泡泡先给自己加个空的 children 数组
+        items.forEach(item => { lookup[item.id] = { ...item, children: [] }; });
         items.forEach(item => {
-            lookup[item.id] = { ...item, children: [] };
-        });
-
-        // 2. 组装
-        items.forEach(item => {
-            // 如果有爸爸，就把自己塞进爸爸的 children 里
             if (item.parentId && lookup[item.parentId]) {
                 lookup[item.parentId].children.push(lookup[item.id]);
             } else {
-                // 如果没有爸爸，说明是顶级课程
                 rootItems.push(lookup[item.id]);
             }
         });
-
         return rootItems;
     };
 
@@ -61,64 +50,33 @@ function Home() {
 
     const handleShowMenu = (x, y, options) => { setGlobalMenu({ x, y, options }); };
 
-    // === 控制台样式 ===
-    const controlPanelStyle = {
-        position: 'fixed', top: '80px', left: '20px', zIndex: 100,
-        background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)',
-        padding: '10px', borderRadius: '16px',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.1)', border: '1px solid rgba(255,255,255,0.5)',
-        display: 'flex', flexDirection: 'column', gap: '5px'
-    };
-
-    const levelBtnStyle = (isActive) => ({
-        border: 'none', background: isActive ? '#ffafcc' : 'transparent',
-        color: isActive ? 'white' : '#666',
-        borderRadius: '8px', padding: '5px 10px', cursor: 'pointer',
-        fontSize: '12px', fontWeight: 'bold', transition: 'all 0.2s'
-    });
-
-    if (loading) return <div>加载数学宇宙中...</div>;
+    if (loading) return <div style={{padding:'20px', textAlign:'center', color:'#fff'}}>正在加载数学宇宙...</div>;
 
     return (
         <div style={{ padding: '20px' }}>
-            {/* === 左上角固定控制台 === */}
-            <div style={controlPanelStyle}>
-                <div style={{fontSize:'12px', color:'#999', marginBottom:'5px', textAlign:'center'}}>层级控制</div>
-                {[1, 2, 3, 4].map(lvl => (
-                    <button 
-                        key={lvl}
-                        style={levelBtnStyle(expandCommand.level === lvl)}
-                        onClick={() => setExpandCommand({ level: lvl, ts: Date.now() })}
-                    >
-                        只看 {lvl} 级
-                    </button>
-                ))}
-                <button 
-                    style={levelBtnStyle(expandCommand.level === 5)}
-                    onClick={() => setExpandCommand({ level: 5, ts: Date.now() })}
-                >
-                    全部展开
-                </button>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', marginLeft: '120px' }}>
-                <h1>Maki 开源数学平台</h1>
+            {/* 顶部标题栏 */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h1 style={{margin:0, fontSize:'1.5rem'}}>Maki 开源数学平台</h1>
                 {canEdit && (
-                    <button onClick={() => setShowCreateCourse(true)} style={{ padding: '10px 20px', background: '#007bff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                        + 创建新课程
+                    <button 
+                        onClick={() => setShowCreateCourse(true)}
+                        style={{ padding: '8px 16px', background: '#fff', color: '#ff8fab', border: '2px solid #ff8fab', borderRadius: '20px', fontWeight:'bold' }}
+                    >
+                        + 新课程
                     </button>
                 )}
             </div>
 
-            <div style={{ marginLeft: '120px' /* 给左边控制台留位置 */ }}>
-                {treeData.length === 0 ? <p>暂无课程。</p> : treeData.map(course => (
-                    <div key={course.id} style={{ marginBottom: '40px' }}>
+            {/* 泡泡列表 */}
+            <div>
+                {treeData.length === 0 ? <p style={{color:'#fff'}}>暂无课程。</p> : treeData.map(course => (
+                    <div key={course.id} style={{ marginBottom: '30px' }}>
                         <Bubble 
                             data={course} 
                             level={0} 
                             onRefresh={fetchData} 
                             onShowMenu={handleShowMenu}
-                            expandCommand={expandCommand} // <--- 传下去
+                            expandCommand={expandCommand} // 透传指令
                         />
                     </div>
                 ))}
@@ -130,19 +88,82 @@ function Home() {
     );
 }
 
-// export default App ... (保持原有的 export)
-export default function App() {
-    // ... 保持原有代码 ...
-    // 这里为了节省篇幅，省略 export default App 的内容，请保持你原来 Main layout 的完整性
-    // 只需修改上面的 Home 组件即可
+// === 布局组件：包含导航栏 ===
+function Layout() {
+    // 状态提升：在这里管理折叠指令
+    const [expandCommand, setExpandCommand] = useState({ level: 5, ts: Date.now() });
     const role = localStorage.getItem('role');
+
+    // 按钮样式
+    const btnStyle = (isActive) => ({
+        border: 'none', 
+        background: isActive ? '#ffafcc' : 'rgba(255,255,255,0.5)',
+        color: isActive ? 'white' : '#666',
+        borderRadius: '15px', padding: '6px 12px', cursor: 'pointer',
+        fontSize: '12px', fontWeight: 'bold', transition: 'all 0.2s',
+        marginRight: '8px', marginBottom: '5px' // 防止手机换行挤在一起
+    });
+
+    const navStyle = {
+        padding: '10px 20px', 
+        background: 'rgba(255, 255, 255, 0.7)', 
+        backdropFilter: 'blur(10px)',
+        borderBottom: '1px solid rgba(255,255,255,0.5)',
+        position: 'sticky', top: 0, zIndex: 100,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexWrap: 'wrap' // 手机端允许换行
+    };
+
+    return (
+        <>
+            <nav style={navStyle}>
+                {/* 左侧：首页链接 + 控制按钮 */}
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Link to="/" style={{ marginRight: '20px', textDecoration: 'none', color: '#4a4e69', fontWeight: '900', fontSize:'1.2rem' }}>MakiMath</Link>
+                    
+                    {/* 层级控制按钮组 */}
+                    <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap' }}>
+                        <span style={{fontSize:'12px', color:'#888', marginRight:'8px', display:'none'}}>层级:</span>
+                        {[1, 2, 3].map(lvl => (
+                            <button key={lvl} style={btnStyle(expandCommand.level === lvl)} onClick={() => setExpandCommand({ level: lvl, ts: Date.now() })}>
+                                {lvl}级
+                            </button>
+                        ))}
+                        <button style={btnStyle(expandCommand.level === 5)} onClick={() => setExpandCommand({ level: 5, ts: Date.now() })}>
+                            全部
+                        </button>
+                    </div>
+                </div>
+
+                {/* 右侧：登录信息 */}
+                <div>
+                    {!role ? (
+                        <Link to="/login" style={{textDecoration:'none', color:'#ff8fab', fontWeight:'bold'}}>登录</Link>
+                    ) : (
+                        <span style={{fontSize:'12px', color:'#888'}}>
+                            {role} 
+                            <button onClick={() => { localStorage.clear(); window.location.href='/'; }} style={{marginLeft:'5px', border:'none', background:'none', color:'#ff6b6b', cursor:'pointer'}}>退出</button>
+                        </span>
+                    )}
+                </div>
+            </nav>
+            
+            {/* 这里的 context 会传递给 Home */}
+            <Outlet context={{ expandCommand }} />
+        </>
+    );
+}
+
+// === 主入口 ===
+export default function App() {
     return (
         <BrowserRouter>
-            <nav style={{ padding: '10px', background: 'rgba(255,255,255,0.8)', backdropFilter:'blur(5px)', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', position:'sticky', top:0, zIndex:90 }}>
-                <div><Link to="/" style={{ marginRight: '10px', textDecoration: 'none', color: '#333', fontWeight: 'bold' }}>首页</Link></div>
-                <div>{!role ? <Link to="/login" style={{textDecoration:'none', color:'#ffafcc'}}>管理员登录</Link> : <span style={{fontSize:'12px', color:'#888'}}>身份: {role}</span>}</div>
-            </nav>
-            <Routes><Route path="/" element={<Home />} /><Route path="/login" element={<Login />} /></Routes>
+            <Routes>
+                <Route element={<Layout />}>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/login" element={<Login />} />
+                </Route>
+            </Routes>
         </BrowserRouter>
     );
 }
