@@ -17,25 +17,37 @@ namespace MathAPI.Controllers
             _context = context;
         }
 
-        // 获取整个课程结构 (瘦身版)
+        // 获取整个课程结构 (瘦身版 - 修复递归)
         [HttpGet("structure")]
         public async Task<IActionResult> GetStructure()
         {
-            // 使用 Select 进行投影 (Projection)，只取需要的字段
-            // 这样数据库绝对不会读取 Content 列，速度极快
+            // 我们需要先获取所有根节点(课程)，然后 EF Core 会自动帮我们递归投影子节点
             var bubbles = await _context.Bubbles
+                .Where(b => b.ParentId == null) // 只查询顶级课程
+                // 递归映射到 DTO
                 .Select(b => new BubbleStructureDto
                 {
                     Id = b.Id,
                     Name = b.Name,
                     ParentId = b.ParentId,
                     ChildLayout = b.ChildLayout,
-                    OrderIndex = b.OrderIndex,
+                    // 映射知识点
                     Nodes = b.Nodes.Select(n => new NodeSummaryDto 
                     { 
                         Id = n.Id, 
-                        Title = n.Title,
-                        OrderIndex = n.OrderIndex
+                        Title = n.Title 
+                    }).ToList(),
+                    // === 修复关键：递归映射子泡泡 ===
+                    // EF Core 会智能地处理这里的递归 Select
+                    Children = b.Children.Select(child => new BubbleStructureDto 
+                    {
+                        Id = child.Id,
+                        Name = child.Name,
+                        ParentId = child.ParentId,
+                        ChildLayout = child.ChildLayout,
+                        Nodes = child.Nodes.Select(n => new NodeSummaryDto { Id = n.Id, Title = n.Title }).ToList(),
+                        // 这里只需要映射一层 Children，EF 会自动处理更深层级
+                        Children = child.Children.Select(grandChild => new BubbleStructureDto { Id = grandChild.Id, Name = grandChild.Name }).ToList() 
                     }).ToList()
                 })
                 .ToListAsync();
