@@ -3,7 +3,8 @@ using MathAPI.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using System.Text.Json.Serialization; // <--- 新增这个引用
+using System.Text.Json.Serialization;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +14,7 @@ builder.Services.AddDbContext<MathContext>(options =>
     options.UseNpgsql(connectionString));
 
 // 2. 配置 JWT 鉴权
-var jwtKey = "ThisIsASecretKeyForMakiMathPlatform2025!DoNotShare"; 
+var jwtKey = "ThisIsASecretKeyForMakiMathPlatform2025!DoNotShare";
 var key = Encoding.ASCII.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(x =>
@@ -51,6 +52,24 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    // also serve frontend at the same address in development
+    var frontendDist = Path.Combine(builder.Environment.ContentRootPath, "../web-client/dist");
+    app.Use(async (ctx, next) =>
+    {
+        // If the path has no extension (e.g. /, /dashboard, /login)
+        // rewrite it to /index.html so static file middleware can serve it.
+        if (!Path.HasExtension(ctx.Request.Path.Value))
+        {
+            ctx.Request.Path = "/index.html";
+        }
+
+        await next();
+    });
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(frontendDist),
+        RequestPath = ""
+    });
 }
 
 app.UseAuthentication();
