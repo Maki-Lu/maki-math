@@ -30,37 +30,49 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }) => {
     const colors = ['#e3f2fd', '#e8f5e9', '#fff9c4', '#fce4ec', '#f3e5f5'];
     const bgColor = colors[level % colors.length];
 
-    // === 样式定义 (响应式版) ===
+    // === 样式定义 (数学动态版) ===
     const glassStyle = {
         position: 'relative',
-        backgroundColor: 'rgba(255, 255, 255, 0.65)', 
-        border: `2px solid ${level === 0 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.5)'}`,
+        backgroundColor: 'rgba(255, 255, 255, 0.6)', 
+        border: `2px solid ${level === 0 ? '#4a90e2' : '#ccc'}`,
         
-        // 使用 CSS 变量！自动响应手机
-        borderRadius: level === 0 ? '16px' : 'var(--bubble-r)',
-        margin: 'var(--bubble-m)',
-        // 顶部 padding 依然要留给标题，但使用变量计算
-        padding: `calc(var(--bubble-p-v) + 35px) var(--bubble-p-h) var(--bubble-p-v) var(--bubble-p-h)`,
+        // 1. 使用动态圆角
+        borderRadius: level === 0 ? '16px' : 'var(--bubble-radius)',
         
-        minHeight: isCollapsed ? '60px' : '100px',
-        minWidth: 'auto', // 允许手机上变窄
+        // 2. 使用动态外边距
+        margin: 'var(--bubble-margin)',
+        
+        // 3. 使用动态内边距 (关键数学公式！)
+        // 顶部 Padding = 基础动态高度 + 35px (留给标题栏)
+        // 左右/底部 Padding = 基础动态高度
+        padding: `calc(var(--bubble-padding-v) + 35px) var(--bubble-padding-h) var(--bubble-padding-v) var(--bubble-padding-h)`,
+        
+        minHeight: isCollapsed ? '50px' : '120px',
+        // 允许宽度自适应，手机上不撑破屏幕
+        minWidth: 'auto', 
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.05)',
+        boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
         transition: 'all 0.3s ease',
         userSelect: 'none',
         backdropFilter: 'blur(10px)'
     };
 
     const headerStyle = {
-        position: 'absolute', top: '15px', left: 'var(--bubble-p-h)', right: 'var(--bubble-p-h)',
+        position: 'absolute', 
+        top: '15px', 
+        // 标题栏的左右边距也要跟随 padding 变化，保证对齐
+        left: 'var(--bubble-padding-h)', 
+        right: 'var(--bubble-padding-h)',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         borderBottom: isOrdered && !isCollapsed ? '1px dashed #ccc' : 'none',
         paddingBottom: '5px'
     };
 
     const titleStyle = { 
-        fontSize: '16px', fontWeight: 'bold', color: '#555', cursor: 'pointer' 
+        // 字体大小随屏幕变化
+        fontSize: 'var(--title-size)', 
+        fontWeight: 'bold', color: '#555', cursor: 'pointer' 
     };
 
     const contentStyle = {
