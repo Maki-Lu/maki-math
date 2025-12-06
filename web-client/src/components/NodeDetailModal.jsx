@@ -48,7 +48,7 @@ export default function NodeDetailModal({ node, onClose }) {
         color: '#444',
         fontFamily: "'Latin Modern Math', 'M PLUS Rounded 1c', sans-serif" // 优先用数学字体
     };
-
+    
     // 关闭按钮
     const closeBtnStyle = {
         border: 'none', background: '#f1f3f5', borderRadius: '50%',
@@ -83,7 +83,7 @@ export default function NodeDetailModal({ node, onClose }) {
                         onMouseLeave={e => {e.target.style.background='#f1f3f5'; e.target.style.color='#888'}}
                     >✕</button>
                 </div>
-
+                
                 {/* 正文 (Markdown + LaTeX) */}
                 <div style={contentStyle} className="markdown-body">
                     <ReactMarkdown 
