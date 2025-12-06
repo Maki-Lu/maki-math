@@ -1,16 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import AddBubbleModal from './AddBubbleModal';
 import AddNodeModal from './AddNodeModal';
-import EditNodeModal from './EditNodeModal'; // <--- 引入漂亮的编辑弹窗
+import EditNodeModal from './EditNodeModal';
 import NodeDetailModal from './NodeDetailModal';
+import MoveBubbleModal from './MoveBubbleModal'; // <--- 1. 引入新组件
 import api from '../utils/api';
 
 const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }) => {
-    // === 状态 ===
     const [showAddBubble, setShowAddBubble] = useState(false);
     const [showAddNode, setShowAddNode] = useState(false);
-    const [selectedNode, setSelectedNode] = useState(null); // 查看详情
-    const [editingNode, setEditingNode] = useState(null);   // 编辑内容 (新增)
+    const [selectedNode, setSelectedNode] = useState(null);
+    const [editingNode, setEditingNode] = useState(null);
+    const [movingBubble, setMovingBubble] = useState(null); // <--- 2. 新增移动状态
     const [isCollapsed, setIsCollapsed] = useState(false);
     
     const timerRef = useRef(null);
@@ -21,12 +22,13 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }) => {
 
     const isOrdered = data.childLayout === 0;
 
-    // === 监听折叠 ===
     useEffect(() => {
         if (expandCommand) setIsCollapsed(level >= expandCommand.level);
     }, [expandCommand, level]);
 
-    // === 样式定义 (数学动态版) ===
+    const colors = ['#e3f2fd', '#e8f5e9', '#fff9c4', '#fce4ec', '#f3e5f5'];
+    const bgColor = colors[level % colors.length];
+
     const glassStyle = {
         position: 'relative',
         backgroundColor: 'rgba(255, 255, 255, 0.6)', 
@@ -54,9 +56,7 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }) => {
     const contentStyle = {
         display: isCollapsed ? 'none' : 'flex',
         flexDirection: isOrdered ? 'column' : 'row',
-        // 优化：无论有序无序，手机上都允许换行，防止撑破
-        flexWrap: 'wrap', 
-        // 优化：无序时居中，有序时靠左
+        flexWrap: 'wrap',
         justifyContent: isOrdered ? 'flex-start' : 'center',
         gap: '10px', width: '100%', marginTop: '10px'
     };
@@ -64,14 +64,13 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }) => {
     const btnStyle = { border:'none', borderRadius:'12px', padding:'4px 8px', cursor:'pointer', fontSize:'12px', fontWeight:'bold', color:'white', marginLeft:'5px' };
     const nodeStyle = { background:'white', border:'1px solid #eee', borderRadius:'12px', padding:'10px 15px', cursor:'pointer', display:'flex', alignItems:'center', boxShadow:'0 2px 5px rgba(0,0,0,0.05)' };
 
-    // === 交互逻辑 ===
+    // === 菜单逻辑 ===
     const getMenuOptions = (targetData, isNode = false) => {
         const options = [];
         if (isNode) {
             options.push({ 
                 label: '✏️ 修改内容 (Editor)', 
                 action: async () => {
-                    // 先拉取完整数据，再打开弹窗
                     try {
                         const res = await api.get(`/node/${targetData.id}`);
                         setEditingNode(res.data);
@@ -80,8 +79,15 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }) => {
             });
             if (isAdmin) options.push({ label: '🗑️ 删除', color: 'red', action: () => { if(confirm('删除?')) api.delete(`/node/${targetData.id}`).then(()=>onRefresh()); } });
         } else {
-            // 泡泡改名还是用 prompt 方便
+            // 泡泡菜单
             options.push({ label: '✏️ 重命名', action: () => { const n = prompt('新名:', targetData.name); if(n) api.put(`/bubble/${targetData.id}`, {name:n, layout: targetData.childLayout}).then(()=>onRefresh()); } });
+            
+            // 3. 新增移动选项
+            options.push({ 
+                label: '🚀 移动泡泡', 
+                action: () => { setMovingBubble(targetData); } // 触发移动弹窗
+            });
+
             options.push({ label: '🔄 切换布局', action: () => { api.put(`/bubble/${targetData.id}`, {name: targetData.name, layout: targetData.childLayout===0?1:0}).then(()=>onRefresh()); } });
             if (isAdmin) options.push({ label: '🗑️ 删除', color: 'red', action: () => { if(confirm('删除?')) api.delete(`/bubble/${targetData.id}`).then(()=>onRefresh()); } });
         }
@@ -139,9 +145,10 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }) => {
             {showAddBubble && <AddBubbleModal parentId={data.id} onClose={() => setShowAddBubble(false)} onSuccess={onRefresh} />}
             {showAddNode && <AddNodeModal parentBubbleId={data.id} onClose={() => setShowAddNode(false)} onSuccess={onRefresh} />}
             {selectedNode && <NodeDetailModal node={selectedNode} onClose={() => setSelectedNode(null)} />}
-            
-            {/* 集成漂亮的编辑弹窗 */}
             {editingNode && <EditNodeModal node={editingNode} onClose={() => setEditingNode(null)} onSuccess={onRefresh} />}
+            
+            {/* 4. 渲染移动弹窗 */}
+            {movingBubble && <MoveBubbleModal bubble={movingBubble} onClose={() => setMovingBubble(null)} onSuccess={onRefresh} />}
         </div>
     );
 };

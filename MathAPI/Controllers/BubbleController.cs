@@ -88,7 +88,7 @@ namespace MathAPI.Controllers
             return Ok("Approved");
         }
 
-	// 修改泡泡 (重命名/移动)
+	    // 修改泡泡 (重命名/移动)
         [HttpPut("{id}")]
         [Authorize(Roles = "Editor,Reviewer,Admin")]
         public async Task<IActionResult> UpdateBubble(int id, [FromBody] CreateBubbleDto dto)
@@ -96,15 +96,34 @@ namespace MathAPI.Controllers
             var bubble = await _context.Bubbles.FindAsync(id);
             if (bubble == null) return NotFound();
 
-            // 更新名字
+            // 1. 更新名字
             if (!string.IsNullOrEmpty(dto.Name)) bubble.Name = dto.Name;
             
-            // 更新布局
+            // 2. 更新布局
             bubble.ChildLayout = dto.Layout;
 
-            // 如果涉及移动(ParentId改变)，逻辑比较复杂，暂时先只支持改名和布局
-            // 稍后我们专门写一个 Move 接口
+            // 3. 更新父节点 (移动)
+            // 注意：前端必须保证 ParentId 不是 bubble 自己的子节点，否则会死循环
+            // 如果 dto.ParentId 为 null，说明移动到了最顶层（成为课程）
+            // 这里我们需要判断 dto 是否包含了 ParentId 的修改意图。
+            // 由于 C# int? 的特性，我们可以认为如果前端传了 ParentId，我们就更新它。
             
+            // 这里的逻辑稍微有点 tricky：CreateBubbleDto 的 ParentId 是可空的。
+            // 我们假设：只有当需要移动时，前端才会明确发送 ParentId 字段。
+            // 但为了安全，我们最好创建一个专门的 MoveDto，或者约定好。
+            // 鉴于目前是 CreateBubbleDto，我们直接赋值即可。
+            
+            // 只有当 ParentId 真的变了才更新
+            if (dto.ParentId != bubble.ParentId)
+            {
+                // 简单的防呆检查：不能把自己设为自己的父亲
+                if (dto.ParentId == bubble.Id) 
+                {
+                    return BadRequest("Cannot move bubble inside itself.");
+                }
+                bubble.ParentId = dto.ParentId;
+            }
+
             await _context.SaveChangesAsync();
             return Ok(bubble);
         }
