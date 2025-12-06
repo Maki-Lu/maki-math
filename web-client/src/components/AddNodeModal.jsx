@@ -1,7 +1,11 @@
 import { useState } from 'react';
-import { createPortal } from 'react-dom'; // 1. 引入传送门
+import { createPortal } from 'react-dom';
 import api from '../utils/api';
 import MDEditor from '@uiw/react-md-editor';
+// 1. 引入数学公式插件
+import rehypeKatex from 'rehype-katex';
+import remarkMath from 'remark-math';
+import 'katex/dist/katex.css'; // 引入公式样式
 
 export default function AddNodeModal({ parentBubbleId, onClose, onSuccess }) {
     const [title, setTitle] = useState('');
@@ -30,19 +34,28 @@ export default function AddNodeModal({ parentBubbleId, onClose, onSuccess }) {
 
     const modalContent = (
         <div style={overlayStyle} onClick={onClose}>
-            <div style={{ background: '#fff', padding: '30px', borderRadius: '24px', minWidth: '80%', maxWidth: '600px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', border: '1px solid #f0f0f0' }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: '#fff', padding: '30px', borderRadius: '24px', minWidth: '80%', maxWidth: '800px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', border: '1px solid #f0f0f0' }} onClick={e => e.stopPropagation()}>
                 <h3 style={{ marginTop: 0, color: '#ffb703' }}>★ 添加新知识点</h3>
                 <form onSubmit={handleSubmit}>
                     <div style={{ marginBottom: '15px' }}>
                         <input type="text" value={title} onChange={e => setTitle(e.target.value)} required placeholder="标题 (例如: 导数定义)"
                             style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #eee', fontSize: '16px' }} />
                     </div>
-                    <div style={{ marginBottom: '20px' }}>
+                    
+                    {/* 2. 配置支持 LaTeX 的编辑器 */}
+                    <div style={{ marginBottom: '20px' }} data-color-mode="light">
                         <MDEditor
                             value={content}
-                            onChange={e => setContent(e)}
+                            onChange={setContent}
+                            height={400} // 设置一个固定高度，体验更好
+                            previewOptions={{
+                                // 注入插件
+                                rehypePlugins: [[rehypeKatex, { strict: false }]],
+                                remarkPlugins: [remarkMath],
+                            }}
                         />
                     </div>
+                    
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                         <button type="button" onClick={onClose} style={{ padding: '8px 20px', borderRadius: '20px', border: 'none', background: '#f0f0f0', color: '#555' }}>取消</button>
                         <button type="submit" disabled={loading} style={{ padding: '8px 20px', borderRadius: '20px', border: 'none', background: '#ffb703', color: 'white', fontWeight: 'bold' }}>{loading ? '...' : '添加'}</button>
