@@ -1,23 +1,34 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, Outlet, useOutletContext } from 'react-router-dom';
+import { DndContext, DragOverlay, useSensor, useSensors, MouseSensor, TouchSensor } from '@dnd-kit/core'; // 1. 引入 DnD
 import api from './utils/api';
 import Login from './pages/Login';
 import Bubble from './components/Bubble';
 import AddBubbleModal from './components/AddBubbleModal';
 import ContextMenu from './components/ContextMenu';
 
-// === Home 组件：只负责显示内容 ===
 function Home() {
     const [treeData, setTreeData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showCreateCourse, setShowCreateCourse] = useState(false);
     const [globalMenu, setGlobalMenu] = useState(null);
+    const [activeId, setActiveId] = useState(null); // 当前正在拖拽的 ID
 
-    // 接收来自 App 的全局指令！
     const { expandCommand } = useOutletContext(); 
-
     const role = localStorage.getItem('role');
     const canEdit = role === 'Admin' || role === 'Editor';
+
+    // === DnD 传感器配置 ===
+    const sensors = useSensors(
+        useSensor(MouseSensor, {
+            // 鼠标：按住移动 10px 才算拖拽，防止误触点击
+            activationConstraint: { distance: 10 },
+        }),
+        useSensor(TouchSensor, {
+            // 触摸：长按 250ms 且移动容差 5px 内才激活 (完美适配手机长按逻辑)
+            activationConstraint: { delay: 250, tolerance: 5 },
+        })
+    );
 
     const fetchData = () => {
         setLoading(true);
@@ -26,10 +37,7 @@ function Home() {
                 setTreeData(buildTree(res.data));
                 setLoading(false);
             })
-            .catch(err => {
-                console.error(err);
-                setLoading(false);
-            });
+            .catch(err => { console.error(err); setLoading(false); });
     };
 
     const buildTree = (items) => {
@@ -50,111 +58,123 @@ function Home() {
 
     const handleShowMenu = (x, y, options) => { setGlobalMenu({ x, y, options }); };
 
+    // === 核心：拖拽结束处理 ===
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+        setActiveId(null);
+
+        // 如果没有拖到任何东西上，或者是拖到了自己身上，忽略
+        if (!over || active.id === over.id) return;
+
+        // 这里的 ID 我们在 Bubble 里设置成 "bubble-123" 格式，需要解析
+        const sourceId = parseInt(active.id.split('-')[1]);
+        const targetId = parseInt(over.id.split('-')[1]);
+
+        // 简单的防环检查：不能拖给自己 (后端也会检查)
+        if (sourceId === targetId) return;
+
+        // === 确认框 (符合你的需求：点击确认后才保存) ===
+        if (window.confirm(`确认要将这个泡泡移动到新的位置吗？`)) {
+            // 调用后端 API 移动
+            // 注意：我们需要获取 source 泡泡的名字和布局，这里简单起见假设后端 Update 允许部分更新
+            // 或者我们先 fetch 再 update。为了流畅，直接发 ParentId。
+            
+            // 由于我们的 API 需要传 name 和 layout，我们最好先获取 bubble 信息
+            // 这里做一个简化：先 GET 再 PUT
+            api.get(`/bubble/structure`).then(res => {
+                const bubble = res.data.find(b => b.id === sourceId);
+                if (bubble) {
+                    api.put(`/bubble/${sourceId}`, {
+                        name: bubble.name,
+                        layout: bubble.childLayout,
+                        parentId: targetId
+                    }).then(() => {
+                        fetchData(); // 刷新视图
+                    }).catch(err => alert("移动失败: " + err.message));
+                }
+            });
+        }
+    };
+
+    const handleDragStart = (event) => {
+        setActiveId(event.active.id);
+        // 拖拽开始时，关闭所有菜单
+        setGlobalMenu(null);
+    };
+
     if (loading) return <div style={{padding:'20px', textAlign:'center', color:'#fff'}}>正在加载数学宇宙...</div>;
 
     return (
-        <div style={{ padding: 'var(--page-padding)' }}>
-            {/* 顶部标题栏 */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h1 style={{margin:0, fontSize:'1.5rem'}}>Maki 开源数学平台</h1>
-                {canEdit && (
-                    <button 
-                        onClick={() => setShowCreateCourse(true)}
-                        style={{ padding: '8px 16px', background: '#fff', color: '#ff8fab', border: '2px solid #ff8fab', borderRadius: '20px', fontWeight:'bold' }}
-                    >
-                        + 新课程
-                    </button>
-                )}
-            </div>
+        <DndContext 
+            sensors={sensors} 
+            onDragStart={handleDragStart} 
+            onDragEnd={handleDragEnd}
+        >
+            <div style={{ padding: 'var(--page-padding)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h1 style={{margin:0, fontSize:'1.5rem'}}>Maki 开源数学平台</h1>
+                    {canEdit && (
+                        <button onClick={() => setShowCreateCourse(true)} style={{ padding: '8px 16px', background: '#fff', color: '#ff8fab', border: '2px solid #ff8fab', borderRadius: '20px', fontWeight:'bold' }}>+ 新课程</button>
+                    )}
+                </div>
 
-            {/* 泡泡列表 */}
-            <div>
-                {treeData.length === 0 ? <p style={{color:'#fff'}}>暂无课程。</p> : treeData.map(course => (
-                    <div key={course.id} style={{ marginBottom: '30px' }}>
-                        <Bubble 
-                            data={course} 
-                            level={0} 
-                            onRefresh={fetchData} 
-                            onShowMenu={handleShowMenu}
-                            expandCommand={expandCommand} // 透传指令
-                        />
-                    </div>
-                ))}
-            </div>
+                <div>
+                    {treeData.length === 0 ? <p style={{color:'#fff'}}>暂无课程。</p> : treeData.map(course => (
+                        <div key={course.id} style={{ marginBottom: '30px' }}>
+                            <Bubble 
+                                data={course} 
+                                level={0} 
+                                onRefresh={fetchData} 
+                                onShowMenu={handleShowMenu}
+                                expandCommand={expandCommand} 
+                            />
+                        </div>
+                    ))}
+                </div>
 
-            {showCreateCourse && <AddBubbleModal parentId={null} onClose={() => setShowCreateCourse(false)} onSuccess={fetchData} />}
-            {globalMenu && <ContextMenu x={globalMenu.x} y={globalMenu.y} options={globalMenu.options} onClose={() => setGlobalMenu(null)} />}
-        </div>
+                {/* 拖拽时的残影 (Ghost) */}
+                <DragOverlay>
+                    {activeId ? (
+                        <div style={{
+                            padding: '10px 20px', background: 'rgba(255,255,255,0.9)', 
+                            borderRadius: '12px', boxShadow: '0 10px 20px rgba(0,0,0,0.2)',
+                            border: '2px solid #ffafcc', color: '#555', fontWeight: 'bold'
+                        }}>
+                            🚀 正在移动泡泡...
+                        </div>
+                    ) : null}
+                </DragOverlay>
+
+                {showCreateCourse && <AddBubbleModal parentId={null} onClose={() => setShowCreateCourse(false)} onSuccess={fetchData} />}
+                {globalMenu && <ContextMenu x={globalMenu.x} y={globalMenu.y} options={globalMenu.options} onClose={() => setGlobalMenu(null)} />}
+            </div>
+        </DndContext>
     );
 }
 
-// === 布局组件：包含导航栏 ===
+// ... Layout 和 App 组件保持不变 (请保留你原来的代码) ...
 function Layout() {
-    // 状态提升：在这里管理折叠指令
     const [expandCommand, setExpandCommand] = useState({ level: 5, ts: Date.now() });
     const role = localStorage.getItem('role');
-
-    // 按钮样式
-    const btnStyle = (isActive) => ({
-        border: 'none', 
-        background: isActive ? '#ffafcc' : 'rgba(255,255,255,0.5)',
-        color: isActive ? 'white' : '#666',
-        borderRadius: '15px', padding: '6px 12px', cursor: 'pointer',
-        fontSize: '12px', fontWeight: 'bold', transition: 'all 0.2s',
-        marginRight: '8px', marginBottom: '5px' // 防止手机换行挤在一起
-    });
-
-    const navStyle = {
-        padding: '10px 20px', 
-        background: 'rgba(255, 255, 255, 0.7)', 
-        backdropFilter: 'blur(10px)',
-        borderBottom: '1px solid rgba(255,255,255,0.5)',
-        position: 'sticky', top: 0, zIndex: 100,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        flexWrap: 'wrap' // 手机端允许换行
-    };
-
+    const btnStyle = (isActive) => ({ border: 'none', background: isActive ? '#ffafcc' : 'rgba(255,255,255,0.5)', color: isActive ? 'white' : '#666', borderRadius: '15px', padding: '6px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', transition: 'all 0.2s', marginRight: '8px', marginBottom: '5px' });
+    const navStyle = { padding: '10px 20px', background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(255,255,255,0.5)', position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' };
     return (
         <>
             <nav style={navStyle}>
-                {/* 左侧：首页链接 + 控制按钮 */}
                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                     <Link to="/" style={{ marginRight: '20px', textDecoration: 'none', color: '#4a4e69', fontWeight: '900', fontSize:'1.2rem' }}>MakiMath</Link>
-                    
-                    {/* 层级控制按钮组 */}
                     <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap' }}>
-                        <span style={{fontSize:'12px', color:'#888', marginRight:'8px', display:'none'}}>层级:</span>
-                        {[1, 2, 3].map(lvl => (
-                            <button key={lvl} style={btnStyle(expandCommand.level === lvl)} onClick={() => setExpandCommand({ level: lvl, ts: Date.now() })}>
-                                {lvl}级
-                            </button>
-                        ))}
-                        <button style={btnStyle(expandCommand.level === 5)} onClick={() => setExpandCommand({ level: 5, ts: Date.now() })}>
-                            全部
-                        </button>
+                        {[1, 2, 3].map(lvl => <button key={lvl} style={btnStyle(expandCommand.level === lvl)} onClick={() => setExpandCommand({ level: lvl, ts: Date.now() })}>{lvl}级</button>)}
+                        <button style={btnStyle(expandCommand.level === 5)} onClick={() => setExpandCommand({ level: 5, ts: Date.now() })}>全部</button>
                     </div>
                 </div>
-
-                {/* 右侧：登录信息 */}
-                <div>
-                    {!role ? (
-                        <Link to="/login" style={{textDecoration:'none', color:'#ff8fab', fontWeight:'bold'}}>登录</Link>
-                    ) : (
-                        <span style={{fontSize:'12px', color:'#888'}}>
-                            {role} 
-                            <button onClick={() => { localStorage.clear(); window.location.href='/'; }} style={{marginLeft:'5px', border:'none', background:'none', color:'#ff6b6b', cursor:'pointer'}}>退出</button>
-                        </span>
-                    )}
-                </div>
+                <div>{!role ? <Link to="/login" style={{textDecoration:'none', color:'#ff8fab', fontWeight:'bold'}}>登录</Link> : <span style={{fontSize:'12px', color:'#888'}}>{role} <button onClick={() => { localStorage.clear(); window.location.href='/'; }} style={{marginLeft:'5px', border:'none', background:'none', color:'#ff6b6b', cursor:'pointer'}}>退出</button></span>}</div>
             </nav>
-            
-            {/* 这里的 context 会传递给 Home */}
             <Outlet context={{ expandCommand }} />
         </>
     );
 }
 
-// === 主入口 ===
 export default function App() {
     return (
         <BrowserRouter>
