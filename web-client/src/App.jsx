@@ -7,10 +7,11 @@ import Bubble from './components/Bubble';
 import AddBubbleModal from './components/AddBubbleModal';
 import ContextMenu from './components/ContextMenu';
 import { saveScrollPosition, getScrollPosition } from './utils/storage';
+import logoImg from '../public/logo.png';
 
 function Home() {
     const [treeData, setTreeData] = useState([]);
-    const [loading, setLoading] = useState(true); // 仅用于首次加载
+    const [loading, setLoading] = useState(true); // 仅首次加载显示
     const [showCreateCourse, setShowCreateCourse] = useState(false);
     const [globalMenu, setGlobalMenu] = useState(null);
     const [activeId, setActiveId] = useState(null); 
@@ -24,18 +25,17 @@ function Home() {
         useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
     );
 
-    // 核心修改 1: 分离首次加载和后续刷新
-    // isRefresh: 如果是 true，说明是编辑后的刷新，不要显示全屏 loading
+    // === 核心修复 1: 静默刷新逻辑 ===
     const fetchData = (isRefresh = false) => {
-        if (!isRefresh) setLoading(true); // 只有第一次才转圈圈
+        // 如果是编辑后的刷新(isRefresh=true)，不要设loading，防止页面闪烁和滚动条跳动
+        if (!isRefresh) setLoading(true); 
         
         api.get('/bubble/structure')
             .then(res => {
                 setTreeData(buildTree(res.data));
                 setLoading(false);
                 
-                // 核心修改 2: 仅在首次加载或强制刷新时恢复滚动
-                // 如果是无感刷新(isRefresh=true)，因为DOM没销毁，滚动条本来就不会动，不需要强制scrollTo
+                // 仅在首次加载时恢复滚动位置
                 if (!isRefresh) {
                     setTimeout(() => {
                         const savedY = getScrollPosition();
@@ -70,7 +70,7 @@ function Home() {
         };
         window.addEventListener('scroll', handleScroll);
         
-        // 首次加载
+        // 首次加载 (isRefresh = false)
         fetchData(false);
 
         return () => {
@@ -79,7 +79,7 @@ function Home() {
         };
     }, []);
 
-    // 传递给子组件的刷新函数，标记为 true (静默刷新)
+    // 传递给子组件的刷新函数：使用静默模式
     const handleRefresh = () => fetchData(true);
 
     const handleShowMenu = (x, y, options) => { setGlobalMenu({ x, y, options }); };
@@ -101,7 +101,7 @@ function Home() {
                         layout: bubble.childLayout,
                         parentId: targetId
                     }).then(() => {
-                        handleRefresh(); // 静默刷新
+                        handleRefresh(); // 拖拽后静默刷新
                     }).catch(err => alert("移动失败: " + err.message));
                 }
             });
@@ -113,7 +113,7 @@ function Home() {
         setGlobalMenu(null);
     };
 
-    // 首次加载时显示 Loading，后续刷新不显示
+    // 只有首次加载且没数据时才显示Loading
     if (loading && treeData.length === 0) return <div style={{padding:'20px', textAlign:'center', color:'#fff'}}>正在加载数学宇宙...</div>;
 
     return (
@@ -132,7 +132,7 @@ function Home() {
                             <Bubble 
                                 data={course} 
                                 level={0} 
-                                onRefresh={handleRefresh} // 使用静默刷新
+                                onRefresh={handleRefresh} // 传入静默刷新
                                 onShowMenu={handleShowMenu}
                                 expandCommand={expandCommand} 
                             />
@@ -142,11 +142,7 @@ function Home() {
 
                 <DragOverlay>
                     {activeId ? (
-                        <div style={{
-                            padding: '10px 20px', background: 'rgba(255,255,255,0.9)', 
-                            borderRadius: '12px', boxShadow: '0 10px 20px rgba(0,0,0,0.2)',
-                            border: '2px solid #ffafcc', color: '#555', fontWeight: 'bold'
-                        }}>
+                        <div style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.9)', borderRadius: '12px', boxShadow: '0 10px 20px rgba(0,0,0,0.2)', border: '2px solid #ffafcc', color: '#555', fontWeight: 'bold' }}>
                             🚀 正在移动泡泡...
                         </div>
                     ) : null}
@@ -159,9 +155,9 @@ function Home() {
     );
 }
 
-// Layout 组件：修改 expandCommand 初始值
 function Layout() {
-    // 核心修改 3: 初始值设为 null，防止覆盖本地存储
+    // === 核心修复 2: 初始指令设为 null ===
+    // 这样页面刷新时，Bubble 就不会收到“强制展开”的命令，而是读取 localStorage
     const [expandCommand, setExpandCommand] = useState(null);
     const role = localStorage.getItem('role');
     const btnStyle = (isActive) => ({ border: 'none', background: isActive ? '#ffafcc' : 'rgba(255,255,255,0.5)', color: isActive ? 'white' : '#666', borderRadius: '15px', padding: '6px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', transition: 'all 0.2s', marginRight: '8px', marginBottom: '5px' });
@@ -171,9 +167,22 @@ function Layout() {
         <>
             <nav style={navStyle}>
                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <Link to="/" style={{ marginRight: '20px', textDecoration: 'none', color: '#4a4e69', fontWeight: '900', fontSize:'1.2rem' }}>MakiMath</Link>
+                <Link 
+                    to="/" 
+                    style={{ 
+                        marginRight: '20px', 
+                        textDecoration: 'none', 
+                        color: '#4a4e69', 
+                        fontWeight: '900', 
+                        fontSize:'1.2rem',
+                        display: 'flex',
+                        alignItems: 'center' 
+                    }}
+                >
+                    <img src={logoImg} alt="Maki Logo" style={{ height: '40px', width: 'auto', marginRight: '10px' }} />
+                    MakiMath
+                </Link>
                     <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap' }}>
-                        {/* 点击按钮时，发送带时间戳的指令 */}
                         {[1, 2, 3].map(lvl => <button key={lvl} style={btnStyle(expandCommand?.level === lvl)} onClick={() => setExpandCommand({ level: lvl, ts: Date.now() })}>{lvl}级</button>)}
                         <button style={btnStyle(expandCommand?.level === 5)} onClick={() => setExpandCommand({ level: 5, ts: Date.now() })}>全部</button>
                     </div>
