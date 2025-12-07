@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import api from '../utils/api';
 import MDEditor from '@uiw/react-md-editor';
-// 1. 引入数学公式插件
 import rehypeKatex from 'rehype-katex';
 import remarkMath from 'remark-math';
-import 'katex/dist/katex.css'; // 引入公式样式
+import 'katex/dist/katex.css';
 
 export default function AddNodeModal({ parentBubbleId, onClose, onSuccess }) {
     const [title, setTitle] = useState('');
@@ -26,6 +25,19 @@ export default function AddNodeModal({ parentBubbleId, onClose, onSuccess }) {
         }
     };
 
+    // === 确认退出 ===
+    const handleOverlayClick = () => {
+        // 添加模式下，通常只要点击背景就提示，防止误触
+        if (window.confirm("确定要放弃添加并退出吗？")) {
+            onClose();
+        }
+    };
+
+    // === 拦截拖拽 ===
+    const stopPropagation = (e) => {
+        e.stopPropagation();
+    };
+
     const overlayStyle = {
         position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
         backgroundColor: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(5px)',
@@ -33,8 +45,18 @@ export default function AddNodeModal({ parentBubbleId, onClose, onSuccess }) {
     };
 
     const modalContent = (
-        <div style={overlayStyle} onClick={onClose}>
-            <div style={{ background: '#fff', padding: '30px', borderRadius: '24px', minWidth: '80%', maxWidth: '800px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', border: '1px solid #f0f0f0' }} onClick={e => e.stopPropagation()}>
+        <div style={overlayStyle} onClick={handleOverlayClick}>
+            <div 
+                style={{ 
+                    background: '#fff', padding: '30px', borderRadius: '24px', 
+                    minWidth: '80%', maxWidth: '800px', 
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.1)', border: '1px solid #f0f0f0' 
+                }} 
+                onClick={stopPropagation}
+                onPointerDown={stopPropagation}
+                onMouseDown={stopPropagation}
+                onTouchStart={stopPropagation}
+            >
                 <h3 style={{ marginTop: 0, color: '#ffb703' }}>★ 添加新知识点</h3>
                 <form onSubmit={handleSubmit}>
                     <div style={{ marginBottom: '15px' }}>
@@ -42,14 +64,12 @@ export default function AddNodeModal({ parentBubbleId, onClose, onSuccess }) {
                             style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #eee', fontSize: '16px' }} />
                     </div>
                     
-                    {/* 2. 配置支持 LaTeX 的编辑器 */}
                     <div style={{ marginBottom: '20px' }} data-color-mode="light">
                         <MDEditor
                             value={content}
                             onChange={setContent}
-                            height={400} // 设置一个固定高度，体验更好
+                            height={400}
                             previewOptions={{
-                                // 注入插件
                                 rehypePlugins: [[rehypeKatex, { strict: false }]],
                                 remarkPlugins: [remarkMath],
                             }}

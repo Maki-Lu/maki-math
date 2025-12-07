@@ -78,7 +78,7 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }) => {
         boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
         transition: 'all 0.3s ease',
         userSelect: 'none', backdropFilter: 'blur(10px)',
-        touchAction: 'none',
+        touchAction: 'pan-y',
         ...transformStyle, ...dropStyle
     };
 

@@ -32,6 +32,19 @@ export default function EditNodeModal({ node, onClose, onSuccess }) {
         }
     };
 
+    // === 确认退出 ===
+    const handleOverlayClick = () => {
+        // 编辑模式下，通常只要点击背景就提示，防止误触
+        if (window.confirm("确定要放弃修改并退出吗？")) {
+            onClose();
+        }
+    };
+
+    // === 拦截拖拽 ===
+    const stopPropagation = (e) => {
+        e.stopPropagation();
+    };
+
     const overlayStyle = {
         position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
         backgroundColor: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(5px)',
@@ -39,9 +52,16 @@ export default function EditNodeModal({ node, onClose, onSuccess }) {
     };
 
     const modalContent = (
-        <div style={overlayStyle} onClick={onClose}>
-            <div style={{ background: '#fff', padding: '30px', borderRadius: '24px', minWidth: '80%', maxWidth: '800px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', border: '1px solid #f0f0f0' }} onClick={e => e.stopPropagation()}>
-                <h3 style={{ margin: 0, color: '#ffb703', fontSize: '1.4rem' }}>✏️ 修改知识点</h3>
+        <div style={overlayStyle} onClick={handleOverlayClick}>
+            <div 
+                style={{ background: '#fff', padding: '30px', borderRadius: '24px', minWidth: '80%', maxWidth: '800px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', border: '1px solid #f0f0f0', cursor: 'auto' }} 
+                // 拦截三连：点击、鼠标按下、触摸开始
+                onClick={stopPropagation}
+                onPointerDown={stopPropagation}
+                onMouseDown={stopPropagation}
+                onTouchStart={stopPropagation}
+            >
+                <h3 style={{ marginTop: 0, color: '#ffb703', fontSize: '1.4rem' }}>✏️ 修改知识点</h3>
                 
                 <form onSubmit={handleSubmit}>
                     <div style={{ marginBottom: '15px' }}>
