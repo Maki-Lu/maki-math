@@ -164,7 +164,7 @@ function Layout() {
     const navStyle = { padding: '10px 20px', background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(255,255,255,0.5)', position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' };
     
     return (
-        <>
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             <nav style={navStyle}>
                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                 <Link 
@@ -189,8 +189,15 @@ function Layout() {
                 </div>
                 <div>{!role ? <Link to="/login" style={{textDecoration:'none', color:'#ff8fab', fontWeight:'bold'}}>登录</Link> : <span style={{fontSize:'12px', color:'#888'}}>{role} <button onClick={() => { localStorage.clear(); window.location.href='/'; }} style={{marginLeft:'5px', border:'none', background:'none', color:'#ff6b6b', cursor:'pointer'}}>退出</button></span>}</div>
             </nav>
-            <Outlet context={{ expandCommand }} />
-        </>
+            <main style={{ flex: 1 }}>
+                <Outlet context={{ expandCommand }} />
+            </main>
+            <footer style={{ textAlign: 'center', padding: '12px 0 18px', fontSize: '12px' }}>
+                <a href="http://beian.miit.gov.cn" target="_blank" rel="noreferrer" style={{ color: '#4a4e69' }}>
+                    沪ICP备2022010774号
+                </a>
+            </footer>
+        </div>
     );
 }
 
