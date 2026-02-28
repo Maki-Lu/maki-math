@@ -1,12 +1,17 @@
 name: maki-math-devops
-on:
 
+on:
   push:
+    branches: [ "main" ]
+  pull_request:
     branches: [ "main" ]
 
 jobs:
   backend-build-publish:
+    # Only run if PR is NOT from a fork
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted]
+
     container:
       image: mcr.microsoft.com/dotnet/sdk:8.0
     steps:
@@ -24,14 +29,16 @@ jobs:
     - name: Generate Migration Script
       run: |
         export PATH="$PATH:/github/home/.dotnet/tools"
-        dotnet ef --project MathAPI  migrations script --idempotent --output MathAPI/bin/Release/net8.0/publish/migration.sql
+        dotnet ef --project MathAPI migrations script --idempotent --output MathAPI/bin/Release/net8.0/publish/migration.sql
     - name: publish backend
       uses: actions/upload-artifact@v4
       with:
         name: dotnet-artifact
         path: MathAPI/bin/Release/net8.0/publish
         retention-days: 1
+
   frontend-build-publish:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted]
     defaults:
       run:
@@ -50,7 +57,9 @@ jobs:
         name: vite-artifact
         path: web-client/dist
         retention-days: 1
+
   deploy:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted]
     needs: ["frontend-build-publish", "backend-build-publish"]
     steps:
