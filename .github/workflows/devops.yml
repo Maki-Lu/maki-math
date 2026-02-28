@@ -59,7 +59,8 @@ jobs:
         retention-days: 1
 
   deploy:
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+     # Only run when code is pushed (merged) to main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: [self-hosted]
     needs: ["frontend-build-publish", "backend-build-publish"]
     steps:
