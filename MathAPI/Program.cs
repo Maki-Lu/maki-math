@@ -46,6 +46,42 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+
+// 4. 配置 FluentEmail
+// 直接从配置文件里拿密码
+var emailPassword = builder.Configuration["EmailPassword"];
+
+builder.Services
+    .AddFluentEmail("makimathadmin@163.com", "Maki-Math")
+    .AddMailKitSender(new FluentEmail.MailKitSmtp.SmtpClientOptions
+    {
+        Server = "smtp.163.com",
+        Port = 465,
+        UseSsl = true, 
+        User = "makimathadmin@163.com", // 你可以用自己的163邮箱来测试。
+        Password = emailPassword, //存在文件 ：appsettings.Development.json
+        RequiresAuthentication = true 
+    });
+
+
+
+// appsettings.Development.json 格式
+
+// {
+//   "Logging": {
+//     "LogLevel": {
+//       "Default": "Information",
+//       "Microsoft.AspNetCore": "Warning"
+//     }
+//   },
+//   "EmailPassword": "string"(这里填你自己的密码)
+// }
+
+//开缓存
+
+builder.Services.AddMemoryCache();
+
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -76,5 +112,10 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+
+
+
+
 
 app.Run();
