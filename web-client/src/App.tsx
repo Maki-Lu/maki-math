@@ -47,10 +47,18 @@ function Home() {
     })
 
     items.forEach((item) => {
-      if (item.parentId && lookup[item.parentId]) {
-        lookup[item.parentId].children.push(lookup[item.id])
+      const node = lookup[item.id]
+      if (!node) return
+
+      if (item.parentId) {
+        const parent = lookup[item.parentId]
+        if (parent) {
+          parent.children.push(node)
+        } else {
+          rootItems.push(node)
+        }
       } else {
-        rootItems.push(lookup[item.id])
+        rootItems.push(node)
       }
     })
 
@@ -83,7 +91,7 @@ function Home() {
   }, [buildTree])
 
   useEffect(() => {
-    let timeout: number
+    let timeout: number | undefined = undefined
     const handleScroll = () => {
       clearTimeout(timeout)
       timeout = setTimeout(() => {
@@ -114,8 +122,8 @@ function Home() {
     setActiveId(null)
     if (!over || active.id === over.id) return
 
-    const sourceId = parseInt(String(active.id).split('-')[1])
-    const targetId = parseInt(String(over.id).split('-')[1])
+    const sourceId = parseInt(String(active.id).split('-')[1] || "")
+    const targetId = parseInt(String(over.id).split('-')[1] || "")
     if (sourceId === targetId) return
 
     if (window.confirm(`确认要将这个泡泡移动到新的位置吗？`)) {
