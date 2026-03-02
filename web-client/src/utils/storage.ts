@@ -1,0 +1,42 @@
+/**
+ * localStorage 管理工具函数
+ */
+
+// === 滚动位置管理 ===
+
+export const saveScrollPosition = (y: number): void => {
+  localStorage.setItem('maki_scroll_y', y.toString())
+}
+
+export const getScrollPosition = (): number => {
+  const y = localStorage.getItem('maki_scroll_y')
+  return y ? parseInt(y, 10) : 0
+}
+
+// === 泡泡折叠状态管理 ===
+// 我们用一个对象存储所有泡泡的状态: { "101": true, "102": false }
+
+const STORAGE_KEY = 'maki_bubble_states'
+
+const getAllStates = (): Record<string, boolean> => {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') as Record<string, boolean>
+  } catch {
+    return {}
+  }
+}
+
+export const getBubbleCollapseState = (bubbleId: number): boolean | undefined => {
+  const states = getAllStates()
+  // 返回 true/false，如果没有记录则返回 undefined
+  return states[bubbleId]
+}
+
+export const saveBubbleCollapseState = (bubbleId: number, isCollapsed: boolean): void => {
+  const states = getAllStates()
+  states[bubbleId] = isCollapsed
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(states))
+}
+
+// 当用户点击全局层级按钮时，可能想要清除个别记忆，或者覆盖
+// 这里我们简单处理：全局指令优先级最高，不清除记忆，但在组件里优先响应指令
