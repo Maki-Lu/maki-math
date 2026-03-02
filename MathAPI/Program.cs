@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.FileProviders;
+using MathAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,35 +48,26 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
-// 4. 配置 FluentEmail
-// 直接从配置文件里拿密码
-var emailPassword = builder.Configuration["EmailPassword"];
+// 获取 Smtp 配置节点
+var smtpSettings = builder.Configuration.GetSection("SmtpSettings");
 
+// 配置 FluentEmail
 builder.Services
-    .AddFluentEmail("makimathadmin@163.com", "Maki-Math")
+    .AddFluentEmail(smtpSettings["SenderEmail"], smtpSettings["SenderName"])
     .AddMailKitSender(new FluentEmail.MailKitSmtp.SmtpClientOptions
     {
-        Server = "smtp.163.com",
-        Port = 465,
-        UseSsl = true, 
-        User = "makimathadmin@163.com", // 你可以用自己的163邮箱来测试。
-        Password = emailPassword, //存在文件 ：appsettings.Development.json
-        RequiresAuthentication = true 
+        Server = smtpSettings["Server"],
+        Port = int.Parse(smtpSettings["Port"] ?? "465"),
+        UseSsl = true,
+        User = smtpSettings["SenderEmail"],
+        Password = smtpSettings["Password"], // 这里会从环境变量或机密中读取真实值
+        RequiresAuthentication = true
     });
 
+// 注册邮箱服务
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 
-// appsettings.Development.json 格式
-
-// {
-//   "Logging": {
-//     "LogLevel": {
-//       "Default": "Information",
-//       "Microsoft.AspNetCore": "Warning"
-//     }
-//   },
-//   "EmailPassword": "string"(这里填你自己的密码)
-// }
 
 //开缓存
 
