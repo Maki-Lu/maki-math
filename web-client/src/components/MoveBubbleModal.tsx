@@ -1,7 +1,8 @@
 import { useState, useEffect, FormEvent, CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import api from '../utils/api'
-import type { BubbleStructureDto } from '../types'
+import type { BubbleNode, BubbleStructureDto } from '../types'
+import { buildTree } from '../utils/build_tree'
 
 interface BubbleOption {
   id: number
@@ -28,43 +29,28 @@ export default function MoveBubbleModal({ bubble, onClose, onSuccess }: MoveBubb
       .then((res) => {
         const allBubbles: BubbleOption[] = []
 
-        // 递归函数：将树展平，并计算层级前缀
-        const flatten = (items: BubbleStructureDto[], depth: number = 0): void => {
-          items.forEach((item) => {
+        const flatten = (items: BubbleNode[], depth: number = 0): void => {
+          items.forEach(item => {
             // ❌ 核心过滤：不能移动到【自己】或者【自己的子孙】里面
-            if (item.id === bubble.id) return
+            // 如果当前 item 是 bubble 自己，或者 item 在 bubble 的子孙链条里（虽然前端很难判断子孙链，
+            // 但最简单的逻辑是：如果我们在遍历过程中遇到了 bubble.id，那么这一整枝都不应该加入列表）
+
+            // 简单粗暴法：如果遍历到的 item.id 等于 bubble.id，那么跳过它和它所有的子节点
+            if (item.id === bubble.id) return;
 
             // 添加到选项列表
             allBubbles.push({
               id: item.id,
               name: item.name,
               depth: depth
-            })
+            });
 
-            // 由于后端返回的是扁平列表，我们需要先组装成树
-            // 递归子节点会在 buildTree 中处理
-          })
-        }
-
-        // buildTree 逻辑
-        const buildTree = (items: BubbleStructureDto[]): BubbleStructureDto[] => {
-          const rootItems: BubbleStructureDto[] = []
-          const lookup: Record<number, BubbleStructureDto & { children: BubbleStructureDto[] }> = {}
-
-          items.forEach((i) => {
-            lookup[i.id] = { ...i, children: [] }
-          })
-
-          items.forEach((i) => {
-            if (i.parentId && lookup[i.parentId]) {
-              lookup[i.parentId].children.push(lookup[i.id])
-            } else {
-              rootItems.push(lookup[i.id])
+            // 递归子节点
+            if (item.children && item.children.length > 0) {
+              flatten(item.children, depth + 1);
             }
-          })
-
-          return rootItems
-        }
+          });
+        };
 
         const tree = buildTree(res.data)
         flatten(tree)

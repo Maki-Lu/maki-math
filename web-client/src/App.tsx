@@ -10,6 +10,7 @@ import { saveScrollPosition, getScrollPosition } from './utils/storage'
 import logoImg from '../public/logo.png'
 import type { BubbleNode, ContextMenuOption, ExpandCommand } from './types'
 import type { BubbleStructureDto } from './types'
+import { buildTree } from './utils/build_tree'
 
 interface GlobalMenuState {
   x: number
@@ -32,38 +33,6 @@ function Home() {
     useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
   )
-
-  const buildTree = useCallback((items: BubbleStructureDto[]): BubbleNode[] => {
-    const rootItems: BubbleNode[] = []
-    const lookup: Record<number, BubbleNode> = {}
-
-    items.forEach((item) => {
-      lookup[item.id] = {
-        ...item,
-        children: [],
-        orderIndex: 0,
-        status: 1
-      }
-    })
-
-    items.forEach((item) => {
-      const node = lookup[item.id]
-      if (!node) return
-
-      if (item.parentId) {
-        const parent = lookup[item.parentId]
-        if (parent) {
-          parent.children.push(node)
-        } else {
-          rootItems.push(node)
-        }
-      } else {
-        rootItems.push(node)
-      }
-    })
-
-    return rootItems
-  }, [])
 
   // 核心修复 1: 静默刷新逻辑
   const fetchData = useCallback((isRefresh: boolean = false) => {
