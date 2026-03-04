@@ -18,4 +18,22 @@
 }
 ```
 
-3. Happy coding, run `dotnet run` to serve both frontend & backend
+3. Run backend and frontend separately:
+
+```bash
+# terminal 1 (backend)
+cd MathAPI
+dotnet run
+
+# terminal 2 (frontend)
+cd web-client
+cp .env.development.example .env.development.local
+npm install
+npm run dev
+```
+
+4. If backend is not running at `http://localhost:5204`, update `web-client/.env.development.local`:
+
+```env
+VITE_BACKEND_URL=http://localhost:5000
+```
