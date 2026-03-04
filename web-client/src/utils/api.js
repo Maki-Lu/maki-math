@@ -2,7 +2,8 @@ import axios from 'axios';
 
 // 创建 axios 实例
 const api = axios.create({
-    baseURL: '/api', // Nginx 会把这个转发给后端
+    // In dev, Vite proxies /api to VITE_BACKEND_URL; in prod this can be handled by ingress/Nginx.
+    baseURL: '/api',
     headers: {
         'Content-Type': 'application/json'
     }
