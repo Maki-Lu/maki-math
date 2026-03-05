@@ -29,7 +29,10 @@ jobs:
     - name: Generate Migration Script
       run: |
         export PATH="$PATH:/github/home/.dotnet/tools"
-        dotnet ef --project MathAPI migrations script --idempotent --output MathAPI/bin/Release/net10.0/publish/migration.sql
+        dotnet ef --project MathAPI/MathAPI.csproj migrations script \
+          --no-build \
+          --idempotent \
+          --output MathAPI/bin/Release/net10.0/publish/migration.sql
     - name: publish backend
       uses: actions/upload-artifact@v4
       with:
