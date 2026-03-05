@@ -25,7 +25,7 @@ jobs:
         dotnet restore
         dotnet tool install --global dotnet-ef --version 10.*
     - name: Build
-      run: dotnet publish
+      run: dotnet publish MathAPI/MathAPI.csproj -c Release
     - name: Generate Migration Script
       run: |
         export PATH="$PATH:/github/home/.dotnet/tools"
