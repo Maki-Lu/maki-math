@@ -1,12 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom'; // <--- 引入传送门
+import { createPortal } from 'react-dom';
+import type { ContextMenuProps } from '../types';
 
-export default function ContextMenu({ x, y, options, onClose }) {
-    const menuRef = useRef(null);
+export default function ContextMenu({ x, y, options, onClose }: ContextMenuProps) {
+    const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (menuRef.current && !menuRef.current.contains(e.target)) {
+        const handleClickOutside = (e: Event) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
                 onClose();
             }
         };
@@ -20,7 +21,7 @@ export default function ContextMenu({ x, y, options, onClose }) {
     }, [onClose]);
 
     // 定义菜单的样式
-    const menuStyle = {
+    const menuStyle: React.CSSProperties = {
         position: 'fixed', // 强制固定在窗口
         top: y,
         left: x,
@@ -36,12 +37,12 @@ export default function ContextMenu({ x, y, options, onClose }) {
     const menuContent = (
         <div ref={menuRef} style={menuStyle}>
             {options.map((option, index) => (
-                <div 
+                <div
                     key={index}
-                    onClick={(e) => { 
+                    onClick={(e) => {
                         e.stopPropagation(); // 防止点击菜单穿透
-                        option.action(); 
-                        onClose(); 
+                        option.action();
+                        onClose();
                     }}
                     style={{
                         padding: '10px 20px',
@@ -51,8 +52,8 @@ export default function ContextMenu({ x, y, options, onClose }) {
                         borderBottom: index < options.length - 1 ? '1px solid #eee' : 'none',
                         transition: 'background 0.2s'
                     }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
                 >
                     {option.label}
                 </div>

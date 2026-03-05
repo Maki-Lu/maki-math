@@ -1,9 +1,9 @@
 // === 滚动位置管理 ===
-export const saveScrollPosition = (y) => {
-    localStorage.setItem('maki_scroll_y', y);
+export const saveScrollPosition = (y: number): void => {
+    localStorage.setItem('maki_scroll_y', y.toString());
 };
 
-export const getScrollPosition = () => {
+export const getScrollPosition = (): number => {
     const y = localStorage.getItem('maki_scroll_y');
     return y ? parseInt(y, 10) : 0;
 };
@@ -12,23 +12,27 @@ export const getScrollPosition = () => {
 // 我们用一个对象存储所有泡泡的状态: { "101": true, "102": false }
 const STORAGE_KEY = 'maki_bubble_states';
 
-const getAllStates = () => {
+interface BubbleStates {
+  [bubbleId: string]: boolean;
+}
+
+const getAllStates = (): BubbleStates => {
     try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     } catch {
         return {};
     }
 };
 
-export const getBubbleCollapseState = (bubbleId) => {
+export const getBubbleCollapseState = (bubbleId: number): boolean | undefined => {
     const states = getAllStates();
     // 返回 true/false，如果没有记录则返回 undefined
-    return states[bubbleId];
+    return states[bubbleId.toString()];
 };
 
-export const saveBubbleCollapseState = (bubbleId, isCollapsed) => {
+export const saveBubbleCollapseState = (bubbleId: number, isCollapsed: boolean): void => {
     const states = getAllStates();
-    states[bubbleId] = isCollapsed;
+    states[bubbleId.toString()] = isCollapsed;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(states));
 };
 

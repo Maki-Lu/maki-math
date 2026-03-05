@@ -3,12 +3,13 @@ import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import type { NodeDetailModalProps } from '../types';
 
-export default function NodeDetailModal({ node, onClose }) {
+export default function NodeDetailModal({ node, onClose }: NodeDetailModalProps) {
     if (!node) return null;
 
     // 遮罩层：全屏磨砂
-    const overlayStyle = {
+    const overlayStyle: React.CSSProperties = {
         position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
         backgroundColor: 'rgba(255, 255, 255, 0.3)', // 极淡的遮罩
         backdropFilter: 'blur(8px)', // 强模糊，聚焦视线
@@ -19,7 +20,7 @@ export default function NodeDetailModal({ node, onClose }) {
     };
 
     // 内容卡片：像一张纸
-    const cardStyle = {
+    const cardStyle: React.CSSProperties = {
         background: 'rgba(255, 255, 255, 0.95)',
         width: '90%', maxWidth: '800px', // 宽屏阅读体验
         maxHeight: '85vh', // 留出一点边距
@@ -32,7 +33,7 @@ export default function NodeDetailModal({ node, onClose }) {
     };
 
     // 头部：标题
-    const headerStyle = {
+    const headerStyle: React.CSSProperties = {
         padding: '25px 30px',
         borderBottom: '1px solid rgba(0,0,0,0.06)',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -40,7 +41,7 @@ export default function NodeDetailModal({ node, onClose }) {
     };
 
     // 内容区域：可滚动
-    const contentStyle = {
+    const contentStyle: React.CSSProperties = {
         padding: '30px 40px',
         overflowY: 'auto',
         fontSize: '1.1rem',
@@ -48,9 +49,9 @@ export default function NodeDetailModal({ node, onClose }) {
         color: '#444',
         fontFamily: "'Latin Modern Math', 'M PLUS Rounded 1c', sans-serif" // 优先用数学字体
     };
-    
+
     // 关闭按钮
-    const closeBtnStyle = {
+    const closeBtnStyle: React.CSSProperties = {
         border: 'none', background: '#f1f3f5', borderRadius: '50%',
         width: '36px', height: '36px', cursor: 'pointer',
         fontSize: '18px', color: '#888', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -73,21 +74,21 @@ export default function NodeDetailModal({ node, onClose }) {
                 {/* 头部 */}
                 <div style={headerStyle}>
                     <h2 style={{ margin: 0, color: '#495057', fontSize: '1.5rem' }}>
-                        <span style={{color: '#ffb703', marginRight:'10px'}}>★</span> 
+                        <span style={{color: '#ffb703', marginRight:'10px'}}>★</span>
                         {node.title}
                     </h2>
-                    <button 
-                        style={closeBtnStyle} 
+                    <button
+                        style={closeBtnStyle}
                         onClick={onClose}
-                        onMouseEnter={e => {e.target.style.background='#ffcccc'; e.target.style.color='white'}}
-                        onMouseLeave={e => {e.target.style.background='#f1f3f5'; e.target.style.color='#888'}}
+                        onMouseEnter={e => {(e.currentTarget as HTMLButtonElement).style.background='#ffcccc'; (e.currentTarget as HTMLButtonElement).style.color='white'}}
+                        onMouseLeave={e => {(e.currentTarget as HTMLButtonElement).style.background='#f1f3f5'; (e.currentTarget as HTMLButtonElement).style.color='#888'}}
                     >✕</button>
                 </div>
-                
+
                 {/* 正文 (Markdown + LaTeX) */}
                 <div style={contentStyle} className="markdown-body">
-                    <ReactMarkdown 
-                        remarkPlugins={[remarkMath]} 
+                    <ReactMarkdown
+                        remarkPlugins={[remarkMath]}
                         rehypePlugins={[rehypeKatex]}
                     >
                         {node.content || '*（空空如也，快去添加点数学魔法吧）*'}
