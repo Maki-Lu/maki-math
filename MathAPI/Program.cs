@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.FileProviders;
+using MathAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +47,33 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+
+// 获取 Smtp 配置节点
+var smtpSettings = builder.Configuration.GetSection("SmtpSettings");
+
+// 配置 FluentEmail
+builder.Services
+    .AddFluentEmail(smtpSettings["SenderEmail"], smtpSettings["SenderName"])
+    .AddMailKitSender(new FluentEmail.MailKitSmtp.SmtpClientOptions
+    {
+        Server = smtpSettings["Server"],
+        Port = int.Parse(smtpSettings["Port"] ?? "465"),
+        UseSsl = true,
+        User = smtpSettings["SenderEmail"],
+        Password = smtpSettings["Password"], // 这里会从环境变量或机密中读取真实值
+        RequiresAuthentication = true
+    });
+
+// 注册邮箱服务
+builder.Services.AddScoped<IEmailService, EmailService>();
+
+
+
+//开缓存
+
+builder.Services.AddMemoryCache();
+
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -76,5 +104,10 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+
+
+
+
 
 app.Run();
