@@ -1,22 +1,23 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, Outlet, useOutletContext } from 'react-router-dom';
-import { DndContext, DragOverlay, useSensor, useSensors, MouseSensor, TouchSensor } from '@dnd-kit/core'; 
+import { DndContext, DragOverlay, useSensor, useSensors, MouseSensor, TouchSensor, DragEndEvent } from '@dnd-kit/core';
 import api from './utils/api';
 import Login from './pages/Login';
 import Bubble from './components/Bubble';
 import AddBubbleModal from './components/AddBubbleModal';
 import ContextMenu from './components/ContextMenu';
 import { saveScrollPosition, getScrollPosition } from './utils/storage';
+import type { Bubble as BubbleType, BubbleStructureDto, ExpandCommand, MenuItem } from './types';
 import logoImg from '../public/logo.png';
 
 function Home() {
-    const [treeData, setTreeData] = useState([]);
+    const [treeData, setTreeData] = useState<BubbleType[]>([]);
     const [loading, setLoading] = useState(true); // 仅首次加载显示
     const [showCreateCourse, setShowCreateCourse] = useState(false);
-    const [globalMenu, setGlobalMenu] = useState(null);
-    const [activeId, setActiveId] = useState(null); 
+    const [globalMenu, setGlobalMenu] = useState<{ x: number; y: number; options: MenuItem[] } | null>(null);
+    const [activeId, setActiveId] = useState<string | null>(null);
 
-    const { expandCommand } = useOutletContext(); 
+    const { expandCommand } = useOutletContext<{ expandCommand: ExpandCommand | null }>();
     const role = localStorage.getItem('role');
     const canEdit = role === 'Admin' || role === 'Editor';
 
@@ -28,13 +29,13 @@ function Home() {
     // === 核心修复 1: 静默刷新逻辑 ===
     const fetchData = (isRefresh = false) => {
         // 如果是编辑后的刷新(isRefresh=true)，不要设loading，防止页面闪烁和滚动条跳动
-        if (!isRefresh) setLoading(true); 
-        
-        api.get('/bubble/structure')
+        if (!isRefresh) setLoading(true);
+
+        api.get<BubbleStructureDto[]>('/bubble/structure')
             .then(res => {
                 setTreeData(buildTree(res.data));
                 setLoading(false);
-                
+
                 // 仅在首次加载时恢复滚动位置
                 if (!isRefresh) {
                     setTimeout(() => {
@@ -46,22 +47,23 @@ function Home() {
             .catch(err => { console.error(err); setLoading(false); });
     };
 
-    const buildTree = (items) => {
-        const rootItems = [];
-        const lookup = {};
+    const buildTree = (items: BubbleStructureDto[]): BubbleType[] => {
+        const rootItems: BubbleType[] = [];
+        const lookup: { [key: number]: BubbleType } = {};
         items.forEach(item => { lookup[item.id] = { ...item, children: [] }; });
         items.forEach(item => {
+            const bubbleItem = lookup[item.id] as BubbleType;
             if (item.parentId && lookup[item.parentId]) {
-                lookup[item.parentId].children.push(lookup[item.id]);
+                lookup[item.parentId].children!.push(bubbleItem);
             } else {
-                rootItems.push(lookup[item.id]);
+                rootItems.push(bubbleItem);
             }
         });
         return rootItems;
     };
 
     useEffect(() => {
-        let timeout;
+        let timeout: NodeJS.Timeout;
         const handleScroll = () => {
             clearTimeout(timeout);
             timeout = setTimeout(() => {
@@ -69,7 +71,7 @@ function Home() {
             }, 100);
         };
         window.addEventListener('scroll', handleScroll);
-        
+
         // 首次加载 (isRefresh = false)
         fetchData(false);
 
@@ -82,18 +84,18 @@ function Home() {
     // 传递给子组件的刷新函数：使用静默模式
     const handleRefresh = () => fetchData(true);
 
-    const handleShowMenu = (x, y, options) => { setGlobalMenu({ x, y, options }); };
+    const handleShowMenu = (x: number, y: number, options: MenuItem[]) => { setGlobalMenu({ x, y, options }); };
 
-    const handleDragEnd = (event) => {
+    const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
         setActiveId(null);
         if (!over || active.id === over.id) return;
-        const sourceId = parseInt(active.id.split('-')[1]);
-        const targetId = parseInt(over.id.split('-')[1]);
+        const sourceId = parseInt(active.id.toString().split('-')[1]);
+        const targetId = parseInt(over.id.toString().split('-')[1]);
         if (sourceId === targetId) return;
 
         if (window.confirm(`确认要将这个泡泡移动到新的位置吗？`)) {
-            api.get(`/bubble/structure`).then(res => {
+            api.get<BubbleStructureDto[]>(`/bubble/structure`).then(res => {
                 const bubble = res.data.find(b => b.id === sourceId);
                 if (bubble) {
                     api.put(`/bubble/${sourceId}`, {
@@ -102,14 +104,14 @@ function Home() {
                         parentId: targetId
                     }).then(() => {
                         handleRefresh(); // 拖拽后静默刷新
-                    }).catch(err => alert("移动失败: " + err.message));
+                    }).catch(err => alert("移动失败: " + (err as Error).message));
                 }
             });
         }
     };
 
-    const handleDragStart = (event) => {
-        setActiveId(event.active.id);
+    const handleDragStart = (event: { active: { id: string | number } }) => {
+        setActiveId(String(event.active.id));
         setGlobalMenu(null);
     };
 
@@ -129,12 +131,12 @@ function Home() {
                 <div>
                     {treeData.length === 0 ? <p style={{color:'#fff'}}>暂无课程。</p> : treeData.map(course => (
                         <div key={course.id} style={{ marginBottom: '30px' }}>
-                            <Bubble 
-                                data={course} 
-                                level={0} 
+                            <Bubble
+                                data={course}
+                                level={0}
                                 onRefresh={handleRefresh} // 传入静默刷新
                                 onShowMenu={handleShowMenu}
-                                expandCommand={expandCommand} 
+                                expandCommand={expandCommand}
                             />
                         </div>
                     ))}
@@ -157,26 +159,26 @@ function Home() {
 
 function Layout() {
     // === 核心修复 2: 初始指令设为 null ===
-    // 这样页面刷新时，Bubble 就不会收到“强制展开”的命令，而是读取 localStorage
-    const [expandCommand, setExpandCommand] = useState(null);
+    // 这样页面刷新时，Bubble 就不会收到"强制展开"的命令，而是读取 localStorage
+    const [expandCommand, setExpandCommand] = useState<ExpandCommand | null>(null);
     const role = localStorage.getItem('role');
-    const btnStyle = (isActive) => ({ border: 'none', background: isActive ? '#ffafcc' : 'rgba(255,255,255,0.5)', color: isActive ? 'white' : '#666', borderRadius: '15px', padding: '6px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', transition: 'all 0.2s', marginRight: '8px', marginBottom: '5px' });
-    const navStyle = { padding: '10px 20px', background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(255,255,255,0.5)', position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' };
-    
+    const btnStyle = (isActive: boolean) => ({ border: 'none', background: isActive ? '#ffafcc' : 'rgba(255,255,255,0.5)', color: isActive ? 'white' : '#666', borderRadius: '15px', padding: '6px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', transition: 'all 0.2s', marginRight: '8px', marginBottom: '5px' });
+    const navStyle: React.CSSProperties = { padding: '10px 20px', background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(255,255,255,0.5)', position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' };
+
     return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             <nav style={navStyle}>
                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-                <Link 
-                    to="/" 
-                    style={{ 
-                        marginRight: '20px', 
-                        textDecoration: 'none', 
-                        color: '#4a4e69', 
-                        fontWeight: '900', 
+                <Link
+                    to="/"
+                    style={{
+                        marginRight: '20px',
+                        textDecoration: 'none',
+                        color: '#4a4e69',
+                        fontWeight: '900',
                         fontSize:'1.2rem',
                         display: 'flex',
-                        alignItems: 'center' 
+                        alignItems: 'center'
                     }}
                 >
                     <img src={logoImg} alt="Maki Logo" style={{ height: '40px', width: 'auto', marginRight: '10px' }} />
