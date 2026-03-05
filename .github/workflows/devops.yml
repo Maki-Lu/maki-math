@@ -23,13 +23,17 @@ jobs:
     - name: Restore dependencies
       run: |
         dotnet restore
-        dotnet tool install --global dotnet-ef --version 10.0
+        dotnet tool install --global dotnet-ef --version 10.*
     - name: Build
-      run: dotnet publish
+      run: dotnet publish MathAPI/MathAPI.csproj -c Release
     - name: Generate Migration Script
       run: |
         export PATH="$PATH:/github/home/.dotnet/tools"
-        dotnet ef --project MathAPI migrations script --idempotent --output MathAPI/bin/Release/net8.0/publish/migration.sql
+        dotnet ef --project MathAPI/MathAPI.csproj migrations script \
+          --configuration Release \
+          --no-build \
+          --idempotent \
+          --output MathAPI/bin/Release/net10.0/publish/migration.sql
     - name: publish backend
       uses: actions/upload-artifact@v4
       with:
