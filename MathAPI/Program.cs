@@ -5,6 +5,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.FileProviders;
+using System.Security.Cryptography;
+using MathAPI.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +16,8 @@ builder.Services.AddDbContext<MathContext>(options =>
     options.UseNpgsql(connectionString));
 
 // 2. 配置 JWT 鉴权
-var jwtKey = "ThisIsASecretKeyForMakiMathPlatform2025!DoNotShare";
+var jwtKey = builder.Configuration["Jwt:Secret"] ?? builder.Configuration["JWT_SECRET"]
+    ?? throw new InvalidOperationException("JWT secret is not configured. Set Jwt:Secret or JWT_SECRET.");
 var key = Encoding.ASCII.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(x =>
@@ -46,7 +49,13 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+var initAdminToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+builder.Services.AddSingleton(new InitAdminOptions(initAdminToken));
+
 var app = builder.Build();
+
+var startupLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+startupLogger.LogWarning("Init admin bootstrap token (header: X-Init-Token): {InitAdminToken}", initAdminToken);
 
 if (app.Environment.IsDevelopment())
 {

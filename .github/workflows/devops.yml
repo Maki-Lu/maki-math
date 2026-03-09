@@ -13,23 +13,23 @@ jobs:
     runs-on: [self-hosted]
 
     container:
-      image: mcr.microsoft.com/dotnet/sdk:10.0
+      image: mcr.microsoft.com/dotnet/sdk:10.0.103
     steps:
     - uses: actions/checkout@v4
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 10.0.x
+        dotnet-version: 10.0.103
     - name: Restore dependencies
       run: |
         dotnet restore
-        dotnet tool install --global dotnet-ef --version 10.0
+        dotnet tool restore
     - name: Build
       run: dotnet publish
     - name: Generate Migration Script
       run: |
-        export PATH="$PATH:/github/home/.dotnet/tools"
-        dotnet ef --project MathAPI migrations script --idempotent --output MathAPI/bin/Release/net8.0/publish/migration.sql
+        dotnet tool run dotnet-ef --version
+        dotnet tool run dotnet-ef --project MathAPI/MathAPI.csproj --startup-project MathAPI/MathAPI.csproj migrations script --idempotent --output MathAPI/bin/Release/net10.0/publish/migration.sql
     - name: publish backend
       uses: actions/upload-artifact@v4
       with:
