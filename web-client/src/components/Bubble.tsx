@@ -243,8 +243,8 @@ const Bubble = ({ data, level = 0, onRefresh, onShowMenu, expandCommand }: Bubbl
 
   const triggerMenu = (e: MouseEvent | TouchEvent, targetData: MenuTargetData, isNode: boolean) => {
     if (!canEdit) return
-    const cx = (e as TouchEvent).touches ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX
-    const cy = (e as TouchEvent).touches ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY
+    const cx = (e as TouchEvent).touches?.[0]?.clientX ?? (e as MouseEvent).clientX
+    const cy = (e as TouchEvent).touches?.[0]?.clientY ?? (e as MouseEvent).clientY
     if (onShowMenu) onShowMenu(cx, cy, getMenuOptions(targetData, isNode))
   }
 
